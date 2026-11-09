@@ -1,8 +1,8 @@
 {
-  "name": "chatfold",
+  "name": "foldy",
   "version": "3.5.6",
   "private": true,
-  "description": "ChatFold - Extensión de Chrome: carpetas inteligentes, bóveda de prompts, sincronización en la nube y borrado masivo para Gemini, ChatGPT, Claude, DeepSeek y OpenCode.",
+  "description": "Foldy - Extensión de Navegador: carpetas inteligentes, bóveda de prompts, sincronización en la nube y borrado masivo para Gemini, ChatGPT, Claude, DeepSeek y OpenCode.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",

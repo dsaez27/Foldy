@@ -3,7 +3,7 @@ import { P } from './platform.js';
 // Diccionario Bilingüe Español / Inglés adaptado dinámicamente a la plataforma activa
 export const I18N = {
   es: {
-    panelTitle: 'ChatFold',
+    panelTitle: 'Foldy',
     toggleMinTitle: 'Clic para minimizar/expandir',
     toolbarCollapseTitle: 'Contraer barra superior (Arrastra para mover)',
     toolbarExpandTitle: 'Expandir barra superior (Arrastra para mover)',
@@ -113,7 +113,7 @@ export const I18N = {
     ]
   },
   en: {
-    panelTitle: 'ChatFold',
+    panelTitle: 'Foldy',
     toggleMinTitle: 'Click to minimize/expand',
     toolbarCollapseTitle: 'Collapse top bar (Drag to move)',
     toolbarExpandTitle: 'Expand top bar (Drag to move)',

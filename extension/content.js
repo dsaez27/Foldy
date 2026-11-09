@@ -324,7 +324,7 @@
   // src/i18n.js
   var I18N = {
     es: {
-      panelTitle: "ChatFold",
+      panelTitle: "Foldy",
       toggleMinTitle: "Clic para minimizar/expandir",
       toolbarCollapseTitle: "Contraer barra superior (Arrastra para mover)",
       toolbarExpandTitle: "Expandir barra superior (Arrastra para mover)",
@@ -433,7 +433,7 @@
       ]
     },
     en: {
-      panelTitle: "ChatFold",
+      panelTitle: "Foldy",
       toggleMinTitle: "Click to minimize/expand",
       toolbarCollapseTitle: "Collapse top bar (Drag to move)",
       toolbarExpandTitle: "Expand top bar (Drag to move)",
