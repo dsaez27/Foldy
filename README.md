@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/chatfold-full.png" alt="ChatFold" width="380" />
+  <img src="assets/foldy-full.png" alt="Foldy" width="380" />
 </p>
 
 # Foldy v3.5.6: Gestor Universal de Carpetas para Gemini, ChatGPT, Claude, DeepSeek & OpenCode

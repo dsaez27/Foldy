@@ -229,7 +229,7 @@ draw = ImageDraw.Draw(base)
 draw.rounded_rectangle([px, py, px + pw, py + ph], radius=18, fill=(24, 27, 36, 240), outline=(255, 255, 255, 45))
 
 # Header of Panel
-draw.text((px + 14, py + 12), 'ChatFold', font=font_body_b, fill=(255, 255, 255, 255))
+draw.text((px + 14, py + 12), 'Foldy', font=font_body_b, fill=(255, 255, 255, 255))
 # + Carpeta button
 draw.rounded_rectangle([px + 130, py + 10, px + 195, py + 30], radius=10, fill=(138, 180, 248, 50), outline=(138, 180, 248, 100))
 draw.text((px + 138, py + 12), '+ Carpeta', font=font_badge, fill=(210, 230, 255, 255))
@@ -318,11 +318,17 @@ draw.text((rx + 22, 742), 'Disponible en Microsoft Edge Add-ons & Chrome Web Sto
 out_dir = r'C:\Users\Admin Lab\Proyectos\ChatFold\assets'
 out_desktop = r'C:\Users\Admin Lab\Desktop'
 file_name = 'chatfold-edge-store-promo-1280x800.png'
+file_name_foldy = 'foldy-edge-store-promo-1280x800.png'
 
 path1 = os.path.join(out_dir, file_name)
+path1_f = os.path.join(out_dir, file_name_foldy)
 path2 = os.path.join(out_desktop, file_name)
+path2_f = os.path.join(out_desktop, file_name_foldy)
 
 base.convert('RGB').save(path1, 'PNG', quality=95)
-base.convert('RGB').save(path2, 'PNG', quality=95)
+base.convert('RGB').save(path1_f, 'PNG', quality=95)
+if os.path.exists(out_desktop):
+    base.convert('RGB').save(path2, 'PNG', quality=95)
+    base.convert('RGB').save(path2_f, 'PNG', quality=95)
 
-print(f'Successfully generated promo screenshot at:\n- {path1}\n- {path2}')
+print(f'Successfully generated promo screenshot at:\n- {path1}\n- {path1_f}')
