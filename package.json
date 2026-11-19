@@ -2,7 +2,7 @@
   "name": "foldy",
   "version": "3.5.7",
   "private": true,
-  "description": "Foldy - Extensión de Navegador: carpetas inteligentes, bóveda de prompts, sincronización en la nube y borrado masivo para Gemini, ChatGPT, Claude, DeepSeek y OpenCode.",
+  "description": "Foldy - Browser Extension / Extensión de Navegador: smart folders, prompt vault, cloud sync & bulk delete for Gemini, ChatGPT, Claude, DeepSeek & OpenCode.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",

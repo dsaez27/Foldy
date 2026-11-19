@@ -20,7 +20,9 @@ const options = {
   target: 'chrome110',
   charset: 'utf8',
   legalComments: 'none',
-  banner: { js: '/* Generado con esbuild desde src/. No editar a mano: ejecutar "npm run build". */' },
+  banner: {
+    js: '/* Generated with esbuild from src/ (do not edit manually; run "npm run build") | Generado con esbuild desde src/ (no editar a mano; ejecutar "npm run build"). */'
+  },
   logLevel: 'info'
 };
 

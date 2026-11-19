@@ -1,4 +1,4 @@
-/* Generado con esbuild desde src/. No editar a mano: ejecutar "npm run build". */
+/* Generated with esbuild from src/ (do not edit manually; run "npm run build") | Generado con esbuild desde src/ (no editar a mano; ejecutar "npm run build"). */
 (() => {
   // src/icons.js
   var SVG_NS = "http://www.w3.org/2000/svg";

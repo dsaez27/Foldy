@@ -60,4 +60,6 @@ for (const locale of ['es', 'en']) {
   assert.ok(extDesc.length > 0 && extDesc.length <= 132, `[${locale}] extDesc debe tener entre 1 y 132 caracteres (actual: ${extDesc.length})`);
 }
 
-console.log(`✔ Extensión Foldy v${manifest.version} validada correctamente (${requiredFiles.size} archivos, permisos, Gecko ID y _locales OK).`);
+console.log(
+  `✔ [EN] Foldy v${manifest.version} validated (${requiredFiles.size} files, permissions, Gecko ID & _locales OK) / [ES] Extensión Foldy v${manifest.version} validada correctamente.`
+);
