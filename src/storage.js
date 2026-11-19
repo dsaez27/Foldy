@@ -1,9 +1,22 @@
 import { I18N, detectInitialLang } from './i18n.js';
 import { P } from './platform.js';
 
+// Copia segura de un mapa {idConversación: valor}: descarta arrays, claves peligrosas y valores inválidos.
+export function sanitizeMap(src, mapValue) {
+  const out = {};
+  if (!src || typeof src !== 'object' || Array.isArray(src)) return out;
+  for (const key of Object.keys(src)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+    const v = mapValue(src[key]);
+    if (v !== undefined) out[key] = v;
+  }
+  return out;
+}
+
 // Convierte lo guardado (JSON ya parseado) en un estado válido; descarta datos corruptos.
 export function normalizeStoredState(parsed, defaultLang) {
   const isPlainObj = (o) => o && typeof o === 'object' && !Array.isArray(o);
+  parsed = isPlainObj(parsed) ? parsed : {};
   const lang = parsed.lang === 'en' || parsed.lang === 'es' ? parsed.lang : defaultLang;
   const fallbackPrompts = (I18N[lang]?.defaultPrompts || I18N.es.defaultPrompts).map((p) => ({ ...p }));
   return {
@@ -14,7 +27,7 @@ export function normalizeStoredState(parsed, defaultLang) {
           .map((f) => ({
             id: f.id,
             name: f.name,
-            color: f.color || '#4285f4',
+            color: /^#[0-9a-fA-F]{6}$/.test(f.color) ? f.color : '#4285f4',
             keywords: Array.isArray(f.keywords)
               ? f.keywords.filter((k) => typeof k === 'string').map((k) => k.toLowerCase())
               : []
@@ -29,8 +42,8 @@ export function normalizeStoredState(parsed, defaultLang) {
             content: p.content
           }))
       : fallbackPrompts,
-    assignments: isPlainObj(parsed.assignments) ? parsed.assignments : {},
-    protectedIds: isPlainObj(parsed.protectedIds) ? parsed.protectedIds : {},
+    assignments: sanitizeMap(parsed.assignments, (v) => (typeof v === 'string' && v ? v : undefined)),
+    protectedIds: sanitizeMap(parsed.protectedIds, (v) => (v ? true : undefined)),
     minimized: !!parsed.minimized,
     pos:
       parsed.pos && Number.isFinite(parsed.pos.left) && Number.isFinite(parsed.pos.bottom)
@@ -76,17 +89,80 @@ export function loadFolderData() {
   return initial;
 }
 
-export function saveFolderData(data) {
+let lastSelfWrittenSyncJson = null;
+
+function buildQuotaSafeSyncPayload(syncPayload) {
+  const rawJson = JSON.stringify(syncPayload);
+  if (rawJson.length <= 7200) return { payload: syncPayload, json: rawJson };
+
+  const base = {
+    lang: syncPayload.lang,
+    minimized: !!syncPayload.minimized,
+    folders: Array.isArray(syncPayload.folders) ? syncPayload.folders : [],
+    prompts: Array.isArray(syncPayload.prompts) ? syncPayload.prompts.slice(0, 15) : [],
+    protectedIds: {},
+    assignments: {}
+  };
+
+  let size = JSON.stringify(base).length;
+  const protEntries = Object.entries(syncPayload.protectedIds || {});
+  for (let i = protEntries.length - 1; i >= 0; i--) {
+    const [k, v] = protEntries[i];
+    const entryLen = k.length + 10;
+    if (size + entryLen > 4500) break;
+    base.protectedIds[k] = v;
+    size += entryLen;
+  }
+
+  const assignEntries = Object.entries(syncPayload.assignments || {});
+  for (let i = assignEntries.length - 1; i >= 0; i--) {
+    const [k, v] = assignEntries[i];
+    const entryLen = k.length + String(v).length + 8;
+    if (size + entryLen > 7000) break;
+    base.assignments[k] = v;
+    size += entryLen;
+  }
+
+  let finalJson = JSON.stringify(base);
+  if (finalJson.length > 7400) {
+    base.prompts = [];
+    finalJson = JSON.stringify(base);
+  }
+  return { payload: base, json: finalJson };
+}
+
+export function saveFolderData(data, options = {}) {
   try {
     localStorage.setItem(P.storageKey, JSON.stringify(data));
   } catch (_) {}
 
+  if (options.localOnly) return;
+
   try {
     if (typeof chrome !== 'undefined' && chrome.storage?.sync?.set) {
       const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = data;
-      chrome.storage.sync.set({ [P.storageKey]: syncPayload });
+      const { payload, json: nextJson } = buildQuotaSafeSyncPayload(syncPayload);
+      if (nextJson === lastSelfWrittenSyncJson) return;
+      lastSelfWrittenSyncJson = nextJson;
+      chrome.storage.sync.set({ [P.storageKey]: payload }, () => {
+        void chrome.runtime?.lastError;
+      });
     }
   } catch (_) {}
+}
+
+function mergeFoldersOrPrompts(cloudArr, localArr) {
+  if (!Array.isArray(cloudArr) || cloudArr.length === 0) return Array.isArray(localArr) ? localArr : [];
+  if (!Array.isArray(localArr) || localArr.length === 0) return cloudArr;
+  const seen = new Set(cloudArr.map((item) => item?.id).filter(Boolean));
+  const combined = [...cloudArr];
+  for (const item of localArr) {
+    if (item?.id && !seen.has(item.id)) {
+      seen.add(item.id);
+      combined.push(item);
+    }
+  }
+  return combined;
 }
 
 /**
@@ -99,18 +175,28 @@ export function initCloudSync(getState, applyIncoming) {
 
     chrome.storage.sync.get([P.storageKey], (res) => {
       try {
+        void chrome.runtime?.lastError;
         const cloudData = res?.[P.storageKey];
         const current = getState();
         if (cloudData && typeof cloudData === 'object') {
-          const merged = normalizeStoredState(
-            { ...cloudData, pos: current.pos, toolbarPos: current.toolbarPos, view: current.view },
-            current.lang
-          );
+          const mergedRaw = {
+            ...current,
+            ...cloudData,
+            folders: mergeFoldersOrPrompts(cloudData.folders, current.folders),
+            prompts: mergeFoldersOrPrompts(cloudData.prompts, current.prompts),
+            assignments: { ...(current.assignments || {}), ...(cloudData.assignments || {}) },
+            protectedIds: { ...(current.protectedIds || {}), ...(cloudData.protectedIds || {}) },
+            pos: current.pos,
+            toolbarPos: current.toolbarPos,
+            view: current.view
+          };
+          const merged = normalizeStoredState(mergedRaw, current.lang);
+          const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = merged;
+          lastSelfWrittenSyncJson = buildQuotaSafeSyncPayload(syncPayload).json;
           localStorage.setItem(P.storageKey, JSON.stringify(merged));
           applyIncoming(merged);
         } else {
-          const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = current;
-          chrome.storage.sync.set({ [P.storageKey]: syncPayload });
+          saveFolderData(current);
         }
       } catch (_) {}
     });
@@ -119,11 +205,21 @@ export function initCloudSync(getState, applyIncoming) {
       chrome.storage.onChanged.addListener((changes, area) => {
         if (area !== 'sync' || !changes[P.storageKey]?.newValue) return;
         try {
+          const incomingVal = changes[P.storageKey].newValue;
+          const incomingJson = JSON.stringify(incomingVal);
+          if (incomingJson === lastSelfWrittenSyncJson) return;
+
           const current = getState();
           const merged = normalizeStoredState(
-            { ...changes[P.storageKey].newValue, pos: current.pos, toolbarPos: current.toolbarPos, view: current.view },
+            {
+              ...incomingVal,
+              pos: current.pos,
+              toolbarPos: current.toolbarPos,
+              view: current.view
+            },
             current.lang
           );
+          lastSelfWrittenSyncJson = incomingJson;
           localStorage.setItem(P.storageKey, JSON.stringify(merged));
           applyIncoming(merged);
         } catch (_) {}

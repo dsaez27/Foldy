@@ -51,8 +51,9 @@
   --gcm-checkbox-border: rgba(255, 255, 255, 0.38);
   --gcm-lock-bg: rgba(18, 20, 26, 0.68);
   --gcm-lock-shadow: 0 2px 6px rgba(0,0,0,0.45);
-  --gcm-badge-bg: rgba(18, 20, 26, 0.52);
+  --gcm-badge-bg: rgba(18, 20, 26, 0.84);
   --gcm-badge-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.22);
+  --gcm-badge-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
   --gcm-selected-bg: linear-gradient(90deg, rgba(66,133,244,0.26) 0%, rgba(66,133,244,0.08) 100%);
   --gcm-selected-shadow: inset 0 0 0 1px rgba(138,180,248,0.32);
   --gcm-cancel-btn-bg: rgba(255, 255, 255, 0.08);
@@ -64,12 +65,91 @@
   --gcm-sort-btn-bg: rgba(255, 255, 255, 0.08);
   --gcm-sort-btn-border: rgba(255, 255, 255, 0.15);
   --gcm-panel-footer-border: rgba(255, 255, 255, 0.1);
+  --gcm-accent-text: #d2e3fc;
+  --gcm-accent-strong-text: #a8c7fa;
+  --gcm-accent-bg: linear-gradient(135deg, rgba(138, 180, 248, 0.24), rgba(102, 157, 246, 0.12));
+  --gcm-accent-border: rgba(168, 199, 250, 0.38);
+  --gcm-pill-active-bg: linear-gradient(135deg, rgba(66, 133, 244, 0.38), rgba(138, 180, 248, 0.2));
+  --gcm-pill-active-text: #ffffff;
+  --gcm-focus-ring: #8ab4f8;
 }
 
-/* ---- Modo Claro ---- */
+/* ---- Modo Claro (Host-Aware + OS Fallback) ---- */
+html[data-gcm-theme="light"],
+html.light,
+html.light-theme,
+html[data-theme="light"] {
+  --gcm-bg-toolbar: linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(235,238,246,0.95) 100%);
+  --gcm-border-subtle: rgba(0, 0, 0, 0.12);
+  --gcm-shadow-toolbar: 0 10px 32px rgba(0,0,0,0.14), inset 0 1px 1px rgba(255,255,255,0.8);
+  --gcm-text-primary: #1f2937;
+  --gcm-text-secondary: #374151;
+  --gcm-text-muted: #4b5563;
+  --gcm-bg-panel: linear-gradient(145deg, rgba(255,255,255,0.92) 0%, rgba(235,237,245,0.96) 100%);
+  --gcm-border-panel: rgba(0, 0, 0, 0.1);
+  --gcm-shadow-panel: 0 16px 40px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.9);
+  --gcm-bg-input: rgba(255, 255, 255, 0.85);
+  --gcm-border-input: rgba(0, 0, 0, 0.18);
+  --gcm-text-input: #1f2937;
+  --gcm-placeholder: rgba(0, 0, 0, 0.45);
+  --gcm-bg-input-focus: rgba(255, 255, 255, 1);
+  --gcm-pill-bg: rgba(0, 0, 0, 0.05);
+  --gcm-pill-text: #374151;
+  --gcm-pill-border: rgba(0, 0, 0, 0.1);
+  --gcm-pill-hover-bg: rgba(66, 133, 244, 0.1);
+  --gcm-pill-hover-border: rgba(66, 133, 244, 0.3);
+  --gcm-folder-count-bg: rgba(0, 0, 0, 0.1);
+  --gcm-mini-btn-bg: rgba(0, 0, 0, 0.06);
+  --gcm-mini-btn-border: rgba(0, 0, 0, 0.12);
+  --gcm-footer-btn-bg: rgba(0, 0, 0, 0.04);
+  --gcm-footer-btn-border: rgba(0, 0, 0, 0.1);
+  --gcm-footer-btn-text: #374151;
+  --gcm-popover-bg: linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(240,242,248,0.99) 100%);
+  --gcm-popover-border: rgba(0, 0, 0, 0.1);
+  --gcm-popover-shadow: 0 16px 40px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.9);
+  --gcm-popover-item-hover: rgba(66, 133, 244, 0.08);
+  --gcm-popover-divider: rgba(0, 0, 0, 0.08);
+  --gcm-toast-bg: linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(235,237,245,0.98) 100%);
+  --gcm-toast-border: rgba(0, 0, 0, 0.1);
+  --gcm-toast-shadow: 0 12px 36px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.9);
+  --gcm-progress-track: rgba(0, 0, 0, 0.1);
+  --gcm-modal-bg: linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(238,240,248,0.99) 100%);
+  --gcm-modal-border: rgba(0, 0, 0, 0.1);
+  --gcm-modal-shadow: 0 24px 60px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.9);
+  --gcm-modal-title: #111827;
+  --gcm-modal-desc: #4b5563;
+  --gcm-modal-input-bg: rgba(255, 255, 255, 0.9);
+  --gcm-modal-input-border: rgba(0, 0, 0, 0.15);
+  --gcm-checkbox-bg: rgba(255, 255, 255, 0.92);
+  --gcm-checkbox-border: rgba(0, 0, 0, 0.3);
+  --gcm-lock-bg: rgba(243, 244, 246, 0.88);
+  --gcm-lock-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  --gcm-badge-bg: rgba(255, 255, 255, 0.90);
+  --gcm-badge-shadow: 0 2px 6px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.9);
+  --gcm-badge-text-shadow: none;
+  --gcm-selected-bg: linear-gradient(90deg, rgba(66,133,244,0.14) 0%, rgba(66,133,244,0.04) 100%);
+  --gcm-selected-shadow: inset 0 0 0 1px rgba(66,133,244,0.28);
+  --gcm-cancel-btn-bg: rgba(0, 0, 0, 0.04);
+  --gcm-cancel-btn-border: rgba(0, 0, 0, 0.15);
+  --gcm-select-wrap-hover: rgba(0, 0, 0, 0.06);
+  --gcm-neutral-btn-bg: rgba(0, 0, 0, 0.05);
+  --gcm-neutral-btn-border: rgba(0, 0, 0, 0.12);
+  --gcm-neutral-btn-hover: rgba(0, 0, 0, 0.1);
+  --gcm-sort-btn-bg: rgba(0, 0, 0, 0.05);
+  --gcm-sort-btn-border: rgba(0, 0, 0, 0.12);
+  --gcm-panel-footer-border: rgba(0, 0, 0, 0.08);
+  --gcm-accent-text: #174ea6;
+  --gcm-accent-strong-text: #1a73e8;
+  --gcm-accent-bg: linear-gradient(135deg, rgba(26, 115, 232, 0.16), rgba(66, 133, 244, 0.08));
+  --gcm-accent-border: rgba(26, 115, 232, 0.35);
+  --gcm-pill-active-bg: linear-gradient(135deg, #1a73e8, #1557b0);
+  --gcm-pill-active-text: #ffffff;
+  --gcm-focus-ring: #1a73e8;
+}
+
 @media (prefers-color-scheme: light) {
-  :root {
-    --gcm-bg-toolbar: linear-gradient(135deg, rgba(255,255,255,0.82) 0%, rgba(230,232,240,0.92) 100%);
+  html:not([data-gcm-theme="dark"]):not(.dark):not(.dark-theme):not([data-theme="dark"]) {
+    --gcm-bg-toolbar: linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(235,238,246,0.95) 100%);
     --gcm-border-subtle: rgba(0, 0, 0, 0.12);
     --gcm-shadow-toolbar: 0 10px 32px rgba(0,0,0,0.14), inset 0 1px 1px rgba(255,255,255,0.8);
     --gcm-text-primary: #1f2937;
@@ -81,7 +161,7 @@
     --gcm-bg-input: rgba(255, 255, 255, 0.85);
     --gcm-border-input: rgba(0, 0, 0, 0.18);
     --gcm-text-input: #1f2937;
-    --gcm-placeholder: rgba(0, 0, 0, 0.38);
+    --gcm-placeholder: rgba(0, 0, 0, 0.45);
     --gcm-bg-input-focus: rgba(255, 255, 255, 1);
     --gcm-pill-bg: rgba(0, 0, 0, 0.05);
     --gcm-pill-text: #374151;
@@ -112,10 +192,11 @@
     --gcm-modal-input-border: rgba(0, 0, 0, 0.15);
     --gcm-checkbox-bg: rgba(255, 255, 255, 0.92);
     --gcm-checkbox-border: rgba(0, 0, 0, 0.3);
-    --gcm-lock-bg: rgba(243, 244, 246, 0.75);
+    --gcm-lock-bg: rgba(243, 244, 246, 0.88);
     --gcm-lock-shadow: 0 2px 6px rgba(0,0,0,0.12);
-    --gcm-badge-bg: rgba(255, 255, 255, 0.62);
+    --gcm-badge-bg: rgba(255, 255, 255, 0.90);
     --gcm-badge-shadow: 0 2px 6px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.9);
+    --gcm-badge-text-shadow: none;
     --gcm-selected-bg: linear-gradient(90deg, rgba(66,133,244,0.14) 0%, rgba(66,133,244,0.04) 100%);
     --gcm-selected-shadow: inset 0 0 0 1px rgba(66,133,244,0.28);
     --gcm-cancel-btn-bg: rgba(0, 0, 0, 0.04);
@@ -127,6 +208,13 @@
     --gcm-sort-btn-bg: rgba(0, 0, 0, 0.05);
     --gcm-sort-btn-border: rgba(0, 0, 0, 0.12);
     --gcm-panel-footer-border: rgba(0, 0, 0, 0.08);
+    --gcm-accent-text: #174ea6;
+    --gcm-accent-strong-text: #1a73e8;
+    --gcm-accent-bg: linear-gradient(135deg, rgba(26, 115, 232, 0.16), rgba(66, 133, 244, 0.08));
+    --gcm-accent-border: rgba(26, 115, 232, 0.35);
+    --gcm-pill-active-bg: linear-gradient(135deg, #1a73e8, #1557b0);
+    --gcm-pill-active-text: #ffffff;
+    --gcm-focus-ring: #1a73e8;
   }
 }
 
@@ -134,7 +222,7 @@
 #gcm-toolbar {
   position: fixed !important;
   top: 12px !important;
-  right: 5rem !important;
+  right: 12rem !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -310,9 +398,9 @@
 }
 
 .gcm-btn-folder {
-  background: linear-gradient(135deg, rgba(138, 180, 248, 0.22), rgba(102, 157, 246, 0.1)) !important;
-  color: #d2e3fc !important;
-  border: 1px solid rgba(168, 199, 250, 0.38) !important;
+  background: var(--gcm-accent-bg) !important;
+  color: var(--gcm-accent-text) !important;
+  border: 1px solid var(--gcm-accent-border) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
 }
 
@@ -365,11 +453,11 @@
    ========================================================= */
 #gcm-folders-box {
   position: fixed !important;
-  bottom: 18px !important;
-  left: 18px !important;
-  width: 300px !important;
-  max-width: calc(100vw - 36px) !important;
-  padding: 14px !important;
+  bottom: 64px !important;
+  left: 12px !important;
+  width: 244px !important;
+  max-width: calc(100vw - 24px) !important;
+  padding: 13px !important;
   background: var(--gcm-bg-panel) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
@@ -489,9 +577,9 @@
   display: inline-flex !important;
   align-items: center !important;
   gap: 5px !important;
-  background: linear-gradient(135deg, rgba(138, 180, 248, 0.28), rgba(138, 180, 248, 0.12)) !important;
-  color: #d2e3fc !important;
-  border: 1px solid rgba(168, 199, 250, 0.35) !important;
+  background: var(--gcm-accent-bg) !important;
+  color: var(--gcm-accent-text) !important;
+  border: 1px solid var(--gcm-accent-border) !important;
   border-radius: 99px !important;
   padding: 3px 10px !important;
   font-size: 11px !important;
@@ -541,7 +629,7 @@
   border: 1px solid var(--gcm-border-input) !important;
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.25) !important;
   border-radius: 11px !important;
-  padding: 6px 24px 6px 28px !important;
+  padding: 6px 26px 6px 28px !important;
   font-size: 12px !important;
   color: var(--gcm-text-input) !important;
   outline: none !important;
@@ -551,9 +639,9 @@
 
 .gcm-search-clear {
   position: absolute !important;
-  right: 5px !important;
-  width: 18px !important;
-  height: 18px !important;
+  right: 4px !important;
+  width: 22px !important;
+  height: 22px !important;
   border-radius: 50% !important;
   border: none !important;
   background: rgba(255, 255, 255, 0.12) !important;
@@ -645,8 +733,8 @@
 }
 
 .gcm-folder-pill.active {
-  background: linear-gradient(135deg, rgba(66, 133, 244, 0.38), rgba(138, 180, 248, 0.2)) !important;
-  color: #ffffff !important;
+  background: var(--gcm-pill-active-bg) !important;
+  color: var(--gcm-pill-active-text) !important;
   border-color: rgba(168, 199, 250, 0.65) !important;
   box-shadow: 0 2px 12px rgba(66, 133, 244, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
@@ -670,16 +758,23 @@
 
 .gcm-folder-del {
   margin-left: 1px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
   font-size: 13px !important;
   line-height: 1 !important;
-  opacity: 0.55 !important;
+  opacity: 0.65 !important;
   cursor: pointer !important;
-  transition: opacity 0.15s, color 0.15s !important;
+  transition: opacity 0.15s, color 0.15s, background-color 0.15s !important;
 }
 
 .gcm-folder-del:hover {
   opacity: 1 !important;
   color: #ff8a80 !important;
+  background: rgba(242, 139, 130, 0.16) !important;
 }
 
 /* Barra inferior de utilidades del panel */
@@ -710,8 +805,8 @@
 }
 
 #gcm-prompts-btn {
-  background: linear-gradient(135deg, rgba(138, 180, 248, 0.22), rgba(66, 133, 244, 0.12)) !important;
-  border-color: rgba(168, 199, 250, 0.35) !important;
+  background: var(--gcm-accent-bg) !important;
+  border-color: var(--gcm-accent-border) !important;
   color: var(--gcm-text-primary) !important;
   font-weight: 600 !important;
 }
@@ -728,9 +823,9 @@
 }
 
 .gcm-footer-btn.active {
-  background: linear-gradient(135deg, rgba(66, 133, 244, 0.38), rgba(26, 115, 232, 0.25)) !important;
-  color: #d2e3fc !important;
-  border-color: rgba(168, 199, 250, 0.55) !important;
+  background: var(--gcm-pill-active-bg) !important;
+  color: var(--gcm-pill-active-text) !important;
+  border-color: var(--gcm-accent-border) !important;
 }
 
 /* =========================================================
@@ -788,6 +883,12 @@
     background 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.gcm-checkbox::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: -4px !important;
 }
 
 .gcm-checkbox::after {
@@ -928,8 +1029,19 @@ a.gcm-chat-row[href*="/session/"],
   padding-left: 30px !important;
 }
 
-/* El título de la conversación conserva todo su ancho natural (sin doble/triple padding-right
-   que lo cortaba a 4 letras antes de la etiqueta) y fluye por detrás del badge translúcido */
+/* Reserva de padding derecho cuando no está en hover para no solapar texto con badge/candado */
+.gcm-chat-row.gcm-has-badge:not(:hover) {
+  padding-right: 92px !important;
+}
+
+.gcm-chat-row.gcm-has-lock:not(.gcm-has-badge):not(:hover) {
+  padding-right: 54px !important;
+}
+
+.gcm-chat-row.gcm-has-lock.gcm-has-badge:not(:hover) {
+  padding-right: 116px !important;
+}
+
 .gcm-chat-row.gcm-selected {
   background: var(--gcm-selected-bg) !important;
   box-shadow: var(--gcm-selected-shadow) !important;
@@ -974,19 +1086,17 @@ li.gcm-hidden-by-filter {
   gap: 5px !important;
   padding: 2px 7px 2px 5px !important;
   border-radius: 99px !important;
-  font-size: 9.5px !important;
+  font-size: 10.5px !important;
   font-weight: 700 !important;
   letter-spacing: 0.2px !important;
   line-height: 1.2 !important;
   font-family: 'Google Sans', 'Segoe UI Variable Display', system-ui, sans-serif !important;
   white-space: nowrap !important;
-  max-width: 82px !important;
+  max-width: 96px !important;
   overflow: hidden !important;
   background-color: var(--gcm-badge-bg) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
   color: var(--gcm-text-primary) !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65) !important;
+  text-shadow: var(--gcm-badge-text-shadow) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   pointer-events: none !important;
   position: absolute !important;
@@ -999,7 +1109,7 @@ li.gcm-hidden-by-filter {
 }
 
 .gcm-chat-row:hover .gcm-chat-badge {
-  opacity: 0.16 !important;
+  opacity: 0 !important;
 }
 
 .gcm-chat-row.gcm-has-lock .gcm-chat-badge {
@@ -1131,6 +1241,10 @@ body.gcm-stealth-delete .fixed.inset-0.bg-black\/60 {
 
 .gcm-popover-item:active {
   transform: scale(0.97) !important;
+}
+
+.gcm-popover-item-accent {
+  color: var(--gcm-accent-strong-text) !important;
 }
 
 .gcm-popover-divider {
@@ -1424,8 +1538,42 @@ body.gcm-stealth-delete .fixed.inset-0.bg-black\/60 {
   contain: layout style;
 }
 
+/* Indicadores de foco accesible por teclado (:focus-visible) */
+.gcm-btn:focus-visible,
+.gcm-toolbar-toggle:focus-visible,
+.gcm-mini-btn:focus-visible,
+.gcm-add-folder-btn:focus-visible,
+.gcm-sort-btn:focus-visible,
+.gcm-footer-btn:focus-visible,
+.gcm-folder-pill:focus-visible,
+.gcm-folder-del:focus-visible,
+.gcm-popover-item:focus-visible,
+.gcm-color-swatch:focus-visible,
+.gcm-prompt-del-btn:focus-visible,
+.gcm-search-clear:focus-visible,
+.gcm-lock-icon:focus-visible,
+.gcm-checkbox:focus-visible {
+  outline: 2px solid var(--gcm-focus-ring, #8ab4f8) !important;
+  outline-offset: 2px !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  #gcm-toolbar, #gcm-folders-box, #gcm-folders-box *, #gcm-toolbar * {
+  #gcm-toolbar,
+  #gcm-folders-box,
+  #gcm-folders-box *,
+  #gcm-toolbar *,
+  #gcm-folder-popover,
+  #gcm-folder-popover *,
+  #gcm-status-toast,
+  #gcm-status-toast *,
+  #gcm-modal-overlay,
+  #gcm-modal-overlay *,
+  .gcm-chat-row,
+  .gcm-row-deleting,
+  .gcm-checkbox,
+  .gcm-checkbox::after,
+  .gcm-lock-icon,
+  .gcm-chat-badge {
     transition: none !important;
     animation: none !important;
   }

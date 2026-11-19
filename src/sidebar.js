@@ -94,11 +94,24 @@ export function parseConvId(el) {
   }
   const jslog = el.getAttribute?.('jslog') || '';
   if (jslog) {
-    try {
-      const id = 'conv_' + btoa(encodeURIComponent(jslog)).slice(0, 16);
+    const cachedJslog = rowIdCache.get(el);
+    if (cachedJslog && cachedJslog.href === jslog) return cachedJslog.id;
+    const cMatch = /\bc_([0-9a-fA-F]{8,})\b/.exec(jslog);
+    if (cMatch) {
+      const id = `c_${cMatch[1]}`;
       rowIdCache.set(el, { href: jslog, id });
       return id;
-    } catch (_) {}
+    }
+    let h1 = 0x811c9dc5;
+    let h2 = 0x01000193;
+    for (let i = 0; i < jslog.length; i++) {
+      const ch = jslog.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 0x01000193) >>> 0;
+      h2 = Math.imul(h2 ^ ((ch << 5) | (ch >>> 3)), 0x811c9dc5) >>> 0;
+    }
+    const id = `conv_${h1.toString(36)}_${h2.toString(36)}`;
+    rowIdCache.set(el, { href: jslog, id });
+    return id;
   }
   const keyHolder =
     (el.hasAttribute?.('data-sidebar-chatgpt-conversation-key') ? el : null) ||
@@ -245,7 +258,7 @@ function isLikelyChatGptCloudRow(el, historyContainers) {
 export function getConversationRows() {
   const sidebar = getSidebarElement();
   // En ChatGPT puede haber múltiples contenedores laterales (<nav>, <aside>, flyout de proyectos/tareas):
-  // consultar en `document` (excluyendo <main> y nodos propios de ChatFold) garantiza detectar todos los chats.
+  // consultar en `document` (excluyendo <main> y nodos propios de Foldy) garantiza detectar todos los chats.
   const root = PLATFORM_KEY === 'chatgpt' ? document : sidebar || (PLATFORM_KEY !== 'gemini' ? document : null);
   if (!root) return [];
 
@@ -257,7 +270,7 @@ export function getConversationRows() {
 
   for (let i = 0; i < candidates.length; i++) {
     const el = candidates[i];
-    // Descartar cualquier enlace que esté dentro del área de mensajes principal (<main>) o de la UI de ChatFold
+    // Descartar cualquier enlace que esté dentro del área de mensajes principal (<main>) o de la UI de Foldy
     if (PLATFORM_KEY !== 'gemini' && el.closest('main')) continue;
     if (el.closest('[id^="gcm-"]')) continue;
 
@@ -295,19 +308,28 @@ export function getConversationRows() {
     }
 
     for (let i = 0; i < extraCandidates.length; i++) {
+      const r = findRowContainer(extraCandidates[i]);
+      const existingId = r?.getAttribute?.('data-gcm-conv-id');
+      if (existingId) seenIds.add(existingId);
+    }
+
+    for (let i = 0; i < extraCandidates.length; i++) {
       const el = extraCandidates[i];
       const row = findRowContainer(el);
       if (seenRows.has(row)) continue;
       if (!isLikelyChatGptCloudRow(row, historyContainers)) continue;
 
       const title = extractConvTitle(row, '');
-      let id = parseConvId(row) || slugifyTitleForTaskId(title);
-      if (seenIds.has(id)) {
+      const existingId = row.getAttribute?.('data-gcm-conv-id');
+      let id = existingId || parseConvId(row) || slugifyTitleForTaskId(title);
+      if (!existingId && seenIds.has(id)) {
         let suffix = 2;
         while (seenIds.has(`${id}_${suffix}`)) suffix++;
         id = `${id}_${suffix}`;
       }
-      row.setAttribute('data-gcm-conv-id', id);
+      if (!existingId) {
+        row.setAttribute('data-gcm-conv-id', id);
+      }
       row.setAttribute('data-gcm-task', '1');
 
       seenRows.add(row);

@@ -84,6 +84,153 @@ test('bóveda de prompts abre el modal e inserta prompt en el chat activo', asyn
   w.close();
 });
 
+test('S-11 / S-12: insertPromptIntoChat inserta párrafos <p> en editor contenteditable ProseMirror y los modales cierran con Escape', async () => {
+  const richHtml = `<body><nav aria-label="Sidebar"><ul>
+    <li><a href="/chat/aaaaa11111"><span>Python API error</span></a></li>
+  </ul></nav><main><div class="ProseMirror" contenteditable="true"><p>Texto previo</p></div></main></body>`;
+  const w = loadExtension(bundle, 'claude', { html: richHtml });
+  await sleep(1100);
+
+  // Abrir y cerrar modal de Prompts con Escape (S-12)
+  click(w, $(w, '#gcm-prompts-btn'));
+  await sleep(80);
+  assert.ok($(w, '#gcm-modal-overlay'), 'modal de prompts abierto');
+  assert.equal($(w, '#gcm-modal-overlay .gcm-modal-card').getAttribute('role'), 'dialog');
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await sleep(80);
+  assert.equal($(w, '#gcm-modal-overlay'), null, 'modal cerrado con tecla Escape');
+
+  // Reabrir e insertar prompt en editor ProseMirror contenteditable="true" (S-11)
+  click(w, $(w, '#gcm-prompts-btn'));
+  await sleep(80);
+  click(w, $$(w, '.gcm-prompt-item')[0]);
+  await sleep(100);
+  const editor = $(w, '.ProseMirror');
+  const paragraphs = Array.from(editor.querySelectorAll('p'));
+  assert.ok(paragraphs.length >= 2, 'creó nodos <p> dentro del editor ProseMirror');
+  assert.equal(paragraphs[0].textContent, 'Texto previo');
+  assert.ok(editor.textContent.includes('Ingeniero de Software Senior'));
+  w.close();
+});
+
+test('L-09 / L-10: selección por rango Shift+Clic y toggleSelectAll(false) limpia selectedMap incluso con chats ocultos por filtro', async () => {
+  const w = loadExtension(bundle, 'gemini');
+  await sleep(1100);
+
+  const cbs = $$(w, '.gcm-checkbox:not(#gcm-select-all)');
+  assert.equal(cbs.length, 4);
+
+  // L-10: clic en el primero y Shift+Clic en el tercero selecciona del 0 al 2
+  click(w, cbs[0]);
+  await sleep(50);
+  click(w, cbs[2], { shiftKey: true });
+  await sleep(80);
+  assert.equal($$(w, '.gcm-checkbox.gcm-checked:not(#gcm-select-all)').length, 3, 'Shift+Clic seleccionó el rango de 3 conversaciones');
+
+  // Filtrar por la primera carpeta (oculta conversaciones que no pertenecen a ella)
+  click(w, $$(w, '.gcm-folder-pill')[1]);
+  await sleep(150);
+  assert.ok($$(w, '.gcm-hidden-by-filter').length >= 2, 'hay conversaciones seleccionadas que ahora están ocultas por el filtro');
+
+  // L-09: Desmarcar #gcm-select-all debe limpiar TODAS las selecciones en selectedMap, incluyendo las ocultas
+  const selectAll = $(w, '#gcm-select-all');
+  selectAll.checked = false;
+  selectAll.dispatchEvent(new w.Event('change', { bubbles: true }));
+  await sleep(100);
+
+  // Volver a la vista "Todos" y comprobar que ninguna conversación quedó marcada
+  click(w, $$(w, '.gcm-folder-pill')[0]);
+  await sleep(150);
+  assert.equal($$(w, '.gcm-checkbox.gcm-checked:not(#gcm-select-all)').length, 0, 'ningún chat oculto quedó seleccionado en selectedMap');
+  assert.equal($(w, '#gcm-delete-btn').disabled, true, 'botón borrar deshabilitado al tener 0 seleccionados');
+  w.close();
+});
+
+test('S-04: quitar un chat de carpeta manualmente no lo re-clasifica por eco de chrome.storage.onChanged', async () => {
+  const w = loadExtension(bundle, 'gemini');
+  try {
+    await sleep(1100);
+
+    // aaaaa11111 fue auto-clasificado en f_work por la palabra clave "Python"
+    let data = JSON.parse(w.localStorage.getItem(STORAGE_KEYS.gemini));
+    assert.equal(data.assignments.aaaaa11111, 'f_work');
+
+    // Seleccionar aaaaa11111 y quitarlo de la carpeta desde el popover
+    const firstCb = $(w, '.gcm-checkbox[data-conv-id="aaaaa11111"]');
+    click(w, firstCb);
+    await sleep(80);
+    click(w, $(w, '#gcm-folder-btn'));
+    await sleep(80);
+    const popItems = $$(w, '#gcm-folder-popover .gcm-popover-item');
+    const removeBtn = popItems[popItems.length - 2]; // botón "Quitar de carpeta"
+    click(w, removeBtn);
+    await sleep(200);
+
+    data = JSON.parse(w.localStorage.getItem(STORAGE_KEYS.gemini));
+    assert.equal(data.assignments.aaaaa11111, undefined, 'el chat permanece sin carpeta y no fue re-clasificado por el eco de onChanged');
+  } finally {
+    w.close();
+  }
+});
+
+test('S-06 / S-15: importación directa de backup JSON vía IMPORT_BACKUP y exportación a Markdown', async () => {
+  const w = loadExtension(bundle, 'chatgpt');
+  try {
+    await sleep(1100);
+
+    let capturedMarkdown = '';
+    const OrigBlob = w.Blob;
+    w.Blob = class extends OrigBlob {
+      constructor(parts, options) {
+        super(parts, options);
+        if (options?.type?.includes('text/markdown')) {
+          capturedMarkdown = Array.isArray(parts) ? parts.join('') : String(parts);
+        }
+      }
+    };
+
+    // S-06: enviar mensaje IMPORT_BACKUP con rawJson desde el popup simulado
+    const backupPayload = JSON.stringify({
+      lang: 'es',
+      folders: [{ id: 'f_custom', name: 'Arquitectura', color: '#a142f4', keywords: ['arquitectura'] }],
+      prompts: [{ id: 'p_custom', title: 'Revisión', content: 'Revisa este diseño' }],
+      assignments: { aaaaa11111: 'f_custom' },
+      protectedIds: { aaaaa11111: true }
+    });
+    w.chrome.__mock.sendRuntimeMessage({ action: 'IMPORT_BACKUP', rawJson: backupPayload });
+    await sleep(250);
+
+    const stored = JSON.parse(w.localStorage.getItem(STORAGE_KEYS.chatgpt));
+    assert.equal(stored.folders.length, 1);
+    assert.equal(stored.folders[0].name, 'Arquitectura');
+    assert.equal(stored.assignments.aaaaa11111, 'f_custom');
+    assert.equal(stored.protectedIds.aaaaa11111, true);
+
+    // S-15: seleccionar un chat y exportar a Markdown
+    click(w, $(w, '.gcm-checkbox[data-conv-id="aaaaa11111"]'));
+    await sleep(80);
+    click(w, $(w, '#gcm-export-btn'));
+    await sleep(150);
+
+    assert.ok(capturedMarkdown.length > 0, 'se generó contenido Markdown');
+    assert.ok(capturedMarkdown.includes('Fix javascript bug'), 'incluye el título de la conversación seleccionada en el índice');
+    assert.ok(capturedMarkdown.includes('Arquitectura'), 'incluye el nombre de la carpeta asignada');
+    assert.ok(capturedMarkdown.includes('hola') && capturedMarkdown.includes('mundo'), 'incluye los mensajes de la conversación activa');
+  } finally {
+    w.close();
+  }
+});
+
+test('V-01: sincroniza automáticamente data-gcm-theme en documentElement según el tema del host', async () => {
+  const lightHtml = `<body class="light"><nav><conversations-list>
+    <div data-test-id="conversation"><a href="/app/aaaaa11111"><span class="conversation-title">Chat en modo claro</span></a></div>
+  </conversations-list></nav><main><textarea id="chat-input"></textarea></main></body>`;
+  const w = loadExtension(bundle, 'gemini', { html: lightHtml });
+  await sleep(1100);
+  assert.equal(w.document.documentElement.getAttribute('data-gcm-theme'), 'light');
+  w.close();
+});
+
 test('atajo de teclado Alt+Shift+F minimiza y expande el panel', async () => {
   const w = loadExtension(bundle, 'gemini');
   await sleep(1100);

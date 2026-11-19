@@ -29,6 +29,8 @@ export const state = {
   deletionInProgress: false,
   deletionStopRequested: false,
   lastCheckedCheckbox: null,
+  lastCheckedConvId: null,
+  delegatedListenerAttached: false,
 
   cachedSidebarEl: null,
   cachedChatGptToken: null,
@@ -56,5 +58,5 @@ export function saveView() {
     toolbarCollapsed: state.toolbarCollapsed,
     toolbarVertical: state.toolbarVertical
   };
-  saveFolderData(state.folderState);
+  saveFolderData(state.folderState, { localOnly: true });
 }

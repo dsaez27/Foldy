@@ -279,12 +279,13 @@ export function registerGlobalListeners() {
   document.addEventListener('keydown', (e) => {
     if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey) return;
     const key = (e.key || '').toUpperCase();
-    if (key === 'F') {
+    const code = e.code || '';
+    if (key === 'F' || code === 'KeyF') {
       e.preventDefault();
       state.folderState.minimized = !state.folderState.minimized;
       saveFolderData(state.folderState);
       refreshUI();
-    } else if (key === 'S') {
+    } else if (key === 'S' || code === 'KeyS') {
       e.preventDefault();
       if (state.folderState.minimized) {
         state.folderState.minimized = false;
@@ -314,7 +315,7 @@ export function registerGlobalListeners() {
           exportBackupConfig();
           sendResponse?.({ ok: true });
         } else if (msg.action === 'IMPORT_BACKUP') {
-          importBackupConfig();
+          importBackupConfig(msg.rawJson);
           sendResponse?.({ ok: true });
         } else if (msg.action === 'SET_LANG' || msg.action === 'TOGGLE_LANG') {
           setAppLanguage(msg.lang);
@@ -343,7 +344,7 @@ function buildFoldersPanelDOM(box) {
   title.style.alignItems = 'center';
   title.style.gap = '7px';
 
-  title.appendChild(createIconElement(ICONS.chatfoldLogo));
+  title.appendChild(createIconElement(ICONS.foldyLogo));
 
   const titleText = document.createElement('span');
   titleText.textContent = t().panelTitle;
@@ -481,6 +482,9 @@ function buildFoldersPanelDOM(box) {
 function createFolderPill({ id, name, color, count, deletable, keywords }) {
   const pill = document.createElement('div');
   pill.className = 'gcm-folder-pill' + (state.activeFolderFilter === id ? ' active' : '');
+  pill.setAttribute('role', 'button');
+  pill.setAttribute('tabindex', '0');
+  pill.setAttribute('aria-pressed', String(state.activeFolderFilter === id));
   if (Array.isArray(keywords) && keywords.length > 0) {
     pill.title = `${t().autoRulesPrefix}: ${keywords.join(', ')}`;
   }
@@ -509,19 +513,35 @@ function createFolderPill({ id, name, color, count, deletable, keywords }) {
     del.className = 'gcm-folder-del';
     del.textContent = '×';
     del.title = t().delFolderTitle(name);
+    del.setAttribute('role', 'button');
+    del.setAttribute('tabindex', '0');
+    del.setAttribute('aria-label', t().delFolderTitle(name));
     del.addEventListener('click', (e) => {
       e.stopPropagation();
       deleteFolderById(id);
+    });
+    del.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        deleteFolderById(id);
+      }
     });
     pill.appendChild(del);
   }
 
   pill.addEventListener('click', () => {
-    state.userClickedFilterInSession = id !== 'ALL';
     state.autoSelectAllMode = false;
     state.activeFolderFilter = id;
     saveView();
     refreshUI();
+  });
+
+  pill.addEventListener('keydown', (e) => {
+    if (e.target === pill && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      pill.click();
+    }
   });
 
   return pill;

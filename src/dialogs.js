@@ -5,7 +5,10 @@ import { saveFolderData } from './storage.js';
 
 export function openCreateFolderModal(onCreatedCallback = null) {
   const existing = document.getElementById('gcm-modal-overlay');
-  if (existing) existing.remove();
+  if (existing) {
+    existing._gcmClose?.(false);
+    existing.remove();
+  }
 
   let chosenColor = PRESET_COLORS[state.folderState.folders.length % PRESET_COLORS.length];
 
@@ -14,6 +17,14 @@ export function openCreateFolderModal(onCreatedCallback = null) {
 
   const card = document.createElement('div');
   card.className = 'gcm-modal-card';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+
+  const closeModal = () => {
+    document.removeEventListener('keydown', onEsc);
+    overlay.remove();
+  };
+  overlay._gcmClose = closeModal;
 
   const title = document.createElement('div');
   title.className = 'gcm-modal-title';
@@ -37,13 +48,20 @@ export function openCreateFolderModal(onCreatedCallback = null) {
   colorRow.className = 'gcm-color-picker-row';
 
   PRESET_COLORS.forEach((col) => {
-    const swatch = document.createElement('div');
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
     swatch.className = 'gcm-color-swatch' + (col === chosenColor ? ' selected' : '');
     swatch.style.backgroundColor = col;
+    swatch.setAttribute('aria-label', col);
+    swatch.setAttribute('aria-pressed', col === chosenColor ? 'true' : 'false');
     swatch.addEventListener('click', () => {
       chosenColor = col;
-      colorRow.querySelectorAll('.gcm-color-swatch').forEach((s) => s.classList.remove('selected'));
+      colorRow.querySelectorAll('.gcm-color-swatch').forEach((s) => {
+        s.classList.remove('selected');
+        s.setAttribute('aria-pressed', 'false');
+      });
       swatch.classList.add('selected');
+      swatch.setAttribute('aria-pressed', 'true');
     });
     colorRow.appendChild(swatch);
   });
@@ -54,7 +72,7 @@ export function openCreateFolderModal(onCreatedCallback = null) {
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'gcm-btn gcm-btn-cancel';
   cancelBtn.textContent = t().cancel;
-  cancelBtn.addEventListener('click', () => overlay.remove());
+  cancelBtn.addEventListener('click', closeModal);
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'gcm-btn gcm-btn-stop';
@@ -72,7 +90,7 @@ export function openCreateFolderModal(onCreatedCallback = null) {
       .filter(Boolean);
 
     const newFolder = {
-      id: 'f_' + Date.now().toString(36),
+      id: 'f_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
       name,
       color: chosenColor,
       keywords
@@ -80,7 +98,7 @@ export function openCreateFolderModal(onCreatedCallback = null) {
     state.folderState.folders.push(newFolder);
     autoClassifiedVisited.clear();
     saveFolderData(state.folderState);
-    overlay.remove();
+    closeModal();
     refreshUI();
     if (typeof onCreatedCallback === 'function') {
       onCreatedCallback(newFolder);
@@ -90,15 +108,22 @@ export function openCreateFolderModal(onCreatedCallback = null) {
   saveBtn.addEventListener('click', handleSave);
   inputName.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSave();
-    if (e.key === 'Escape') overlay.remove();
+    if (e.key === 'Escape') closeModal();
   });
   inputKeywords.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSave();
-    if (e.key === 'Escape') overlay.remove();
+    if (e.key === 'Escape') closeModal();
   });
 
+  function onEsc(e) {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  }
+  document.addEventListener('keydown', onEsc);
+
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) closeModal();
   });
 
   actions.appendChild(cancelBtn);
@@ -118,13 +143,18 @@ export function openCreateFolderModal(onCreatedCallback = null) {
 export function showConfirmModal(count, skippedProtectedCount = 0) {
   return new Promise((resolve) => {
     const existing = document.getElementById('gcm-modal-overlay');
-    if (existing) existing.remove();
+    if (existing) {
+      existing._gcmClose?.(false);
+      existing.remove();
+    }
 
     const overlay = document.createElement('div');
     overlay.id = 'gcm-modal-overlay';
 
     const card = document.createElement('div');
     card.className = 'gcm-modal-card';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
 
     const title = document.createElement('div');
     title.className = 'gcm-modal-title';
@@ -145,10 +175,22 @@ export function showConfirmModal(count, skippedProtectedCount = 0) {
     confirmBtn.className = 'gcm-btn gcm-btn-danger';
     confirmBtn.textContent = t().confirmDeleteBtn(count);
 
+    let settled = false;
     const close = (result) => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onEsc);
       overlay.remove();
       resolve(result);
     };
+    overlay._gcmClose = close;
+
+    function onEsc(e) {
+      if (e.key === 'Escape') {
+        close(false);
+      }
+    }
+    document.addEventListener('keydown', onEsc);
 
     cancelBtn.addEventListener('click', () => close(false));
     confirmBtn.addEventListener('click', () => close(true));
@@ -171,6 +213,8 @@ export function updateStatusToast(text, current = null, total = null, autoHideMs
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'gcm-status-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
 
     const label = document.createElement('div');
     label.id = 'gcm-status-label';
@@ -178,6 +222,7 @@ export function updateStatusToast(text, current = null, total = null, autoHideMs
     const track = document.createElement('div');
     track.className = 'gcm-progress-track';
     track.id = 'gcm-status-track';
+    track.setAttribute('role', 'progressbar');
 
     const fill = document.createElement('div');
     fill.className = 'gcm-progress-fill';

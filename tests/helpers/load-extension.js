@@ -1,5 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { readFileSync } from 'node:fs';
+import { createChromeMock } from './chrome-storage-mock.js';
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -51,36 +52,20 @@ const FIXTURES = {
  * Carga un content.js en un DOM simulado (jsdom) imitando cualquiera de las 5 plataformas soportadas.
  * Devuelve la ventana lista para interactuar.
  */
-export function loadExtension(contentJsPath, platform = 'gemini', { storage = {} } = {}) {
+export function loadExtension(contentJsPath, platform = 'gemini', { storage = {}, initialSync = {}, html = null } = {}) {
   const fx = FIXTURES[platform];
-  const dom = new JSDOM(`<!doctype html><html lang="es">${fx.html}</html>`, {
+  const dom = new JSDOM(`<!doctype html><html lang="es">${html || fx.html}</html>`, {
     url: fx.url,
     runScripts: 'outside-only',
     pretendToBeVisual: true
   });
   const { window } = dom;
   Object.entries(storage).forEach(([k, v]) => window.localStorage.setItem(k, v));
-  const syncStore = {};
-  window.chrome = {
-    runtime: {
-      getManifest: () => ({ version: '3.4.0' }),
-      getURL: (p) => `chrome-extension://test/${p}`,
-      onMessage: { addListener: () => {} }
-    },
-    storage: {
-      sync: {
-        get: (_keys, cb) => cb?.(syncStore),
-        set: (obj, cb) => {
-          Object.assign(syncStore, obj);
-          cb?.();
-        }
-      },
-      onChanged: { addListener: () => {} }
-    }
-  };
+  window.chrome = createChromeMock({ initialSync, version: '3.5.6' });
   Object.defineProperty(window.navigator, 'language', { value: 'es-CL', configurable: true });
   window.URL.createObjectURL = () => 'blob:test';
   window.URL.revokeObjectURL = () => {};
+  window.HTMLAnchorElement.prototype.click = () => {};
   window.eval(readFileSync(contentJsPath, 'utf8'));
   return window;
 }
@@ -88,6 +73,6 @@ export function loadExtension(contentJsPath, platform = 'gemini', { storage = {}
 export const $ = (w, sel) => w.document.querySelector(sel);
 export const $$ = (w, sel) => Array.from(w.document.querySelectorAll(sel));
 
-export function click(w, el) {
-  el.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, view: w }));
+export function click(w, el, extra = {}) {
+  el.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, view: w, ...extra }));
 }

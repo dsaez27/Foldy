@@ -1,5 +1,6 @@
 import { applyFolderBadgesAndFilter, runAutoClassification } from './folders.js';
 import { injectSidebarFoldersPanel, registerGlobalListeners } from './panel.js';
+import { syncHostTheme } from './platform.js';
 import { injectCheckboxes, setupDelegatedSidebarListener } from './selection.js';
 import { getConversationRows, getSidebarElement } from './sidebar.js';
 import { state } from './state.js';
@@ -19,6 +20,7 @@ export function refreshUI() {
   if (state.isRefreshing || document.hidden) return;
   state.isRefreshing = true;
   try {
+    syncHostTheme();
     createToolbar();
     const items = getConversationRows();
     runAutoClassification(items);
@@ -36,25 +38,56 @@ export function init() {
     setTimeout(init, 300);
     return;
   }
+  syncHostTheme();
   registerGlobalListeners();
   setupDelegatedSidebarListener();
   setTimeout(refreshUI, 800);
 
-  // MutationObserver: reacciona solo cuando el sidebar cambia (más eficiente que setInterval)
-  const observer = new MutationObserver((mutations) => {
-    if (document.hidden) return;
-    // Solo procesar si hay nodos relevantes añadidos (conversaciones nuevas)
-    // Ignorar los cambios que provoca la propia extensión (badges, candados, checkboxes): evita bucles de refresco.
-    const isOwnNode = (n) => {
-      const el = n.nodeType === 1 ? n : n.parentElement;
-      return !!el && !!el.closest('[id^="gcm-"], [class*="gcm-"]');
-    };
-    const hasRelevantChange = mutations.some((m) => {
-      if (m.addedNodes.length === 0 && m.removedNodes.length === 0) return false;
-      return !Array.from(m.addedNodes).every(isOwnNode) || !Array.from(m.removedNodes).every(isOwnNode);
+  // Observar cambios de clase/atributos de tema en html y body
+  const themeObserver = new MutationObserver(() => {
+    syncHostTheme();
+  });
+  if (document.documentElement) {
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme', 'data-color-scheme', 'data-mode', 'style']
     });
-    if (hasRelevantChange) {
-      scheduleRefresh(150);
+  }
+  themeObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme', 'data-color-scheme', 'data-mode', 'style']
+  });
+
+  // MutationObserver: reacciona solo cuando el sidebar cambia (más eficiente que setInterval)
+  const isOwnNode = (n) => {
+    const el = n.nodeType === 1 ? n : n.parentElement;
+    return !!el && !!el.closest('[id^="gcm-"], [class*="gcm-"]');
+  };
+  const hasNonOwnNode = (list) => {
+    for (let i = 0; i < list.length; i++) {
+      if (!isOwnNode(list[i])) return true;
+    }
+    return false;
+  };
+  const isInsideStreamingMain = (targetNode) => {
+    const el = targetNode?.nodeType === 1 ? targetNode : targetNode?.parentElement;
+    if (!el) return false;
+    const mainEl = el.closest('main, [role="main"]');
+    if (!mainEl) return false;
+    const sidebar = getSidebarElement();
+    return !sidebar || !mainEl.contains(sidebar);
+  };
+  const observer = new MutationObserver((mutations) => {
+    if (document.hidden || state.isRefreshing) return;
+    // Solo procesar si hay nodos relevantes añadidos (conversaciones nuevas)
+    // Ignorar los cambios que provoca la propia extensión (badges, candados, checkboxes) o el streaming dentro de <main>.
+    for (let i = 0; i < mutations.length; i++) {
+      const m = mutations[i];
+      if (isOwnNode(m.target) || isInsideStreamingMain(m.target)) continue;
+      if (hasNonOwnNode(m.addedNodes) || hasNonOwnNode(m.removedNodes)) {
+        scheduleRefresh(150);
+        return;
+      }
     }
   });
 
@@ -82,17 +115,14 @@ export function init() {
     }, 200);
   }
 
-  // Intervalo de seguridad reducido a 4s (solo para casos donde el observer no captura cambios)
+  // Intervalo de seguridad reducido a 4s (solo reengancha el observer si la SPA re-renderizó el sidebar)
   setInterval(() => {
-    if (!document.hidden) {
-      // Si la SPA re-renderizó la barra lateral (o solo se observaba <body>), reenganchar el observer.
-      if (observedTarget) {
-        const sidebar = getSidebarElement();
-        if (!observedTarget.isConnected || (sidebar && sidebar !== observedTarget)) {
-          startObserving();
-        }
+    if (!document.hidden && observedTarget) {
+      const sidebar = getSidebarElement();
+      if (!observedTarget.isConnected || (sidebar && sidebar !== observedTarget)) {
+        startObserving();
+        scheduleRefresh(0);
       }
-      scheduleRefresh(0);
     }
   }, 4000);
 }

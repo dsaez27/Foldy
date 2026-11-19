@@ -31,9 +31,12 @@ function strokeSvg(size, strokeWidth, children, strokeColor = 'currentColor') {
   );
 }
 
+let logoGradSeq = 0;
+
 export const ICONS = {
-  chatfoldLogo: () =>
-    el(
+  foldyLogo: () => {
+    const gradId = `gcmLogoGrad_${++logoGradSeq}`;
+    return el(
       'svg',
       {
         class: 'gcm-svg-logo',
@@ -44,7 +47,7 @@ export const ICONS = {
       },
       [
         el('defs', {}, [
-          el('linearGradient', { id: 'gcmLogoGrad', x1: '0%', y1: '0%', x2: '100%', y2: '100%' }, [
+          el('linearGradient', { id: gradId, x1: '0%', y1: '0%', x2: '100%', y2: '100%' }, [
             el('stop', { offset: '0%', 'stop-color': '#5B6EF7' }),
             el('stop', { offset: '50%', 'stop-color': '#3B82F6' }),
             el('stop', { offset: '100%', 'stop-color': '#1DA1F2' })
@@ -52,7 +55,7 @@ export const ICONS = {
         ]),
         el('path', {
           d: 'M280 120 L590 120 L844 374 L844 630 A170 170 0 0 1 674 800 L455 800 L295 940 L295 800 L280 800 A170 170 0 0 1 110 630 L110 290 A170 170 0 0 1 280 120 Z',
-          fill: 'url(#gcmLogoGrad)'
+          fill: `url(#${gradId})`
         }),
         el('path', {
           d: 'M590 120 L844 374 L690 374 A100 100 0 0 1 590 274 Z',
@@ -61,7 +64,8 @@ export const ICONS = {
         el('rect', { x: 275, y: 405, width: 315, height: 62, rx: 31, fill: '#FFFFFF' }),
         el('rect', { x: 275, y: 535, width: 415, height: 62, rx: 31, fill: '#CBE7FB' })
       ]
-    ),
+    );
+  },
 
   folderPlus: () =>
     strokeSvg(14, 2, [

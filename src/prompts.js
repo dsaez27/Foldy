@@ -36,9 +36,28 @@ export function insertPromptIntoChat(text) {
   } else {
     // Editor contenteditable (ProseMirror en Claude/ChatGPT, Quill/RichTextarea en Gemini)
     const currentText = (input.textContent || '').trim();
-    const nextText = currentText ? `${currentText}\n${text}` : text;
-    input.textContent = nextText;
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+    const isRichEditor =
+      input.classList?.contains('ProseMirror') ||
+      input.classList?.contains('ql-editor') ||
+      !!input.querySelector?.('p');
+    if (isRichEditor) {
+      const lines = (currentText ? `${currentText}\n${text}` : text).split(/\r?\n/);
+      input.textContent = '';
+      for (const line of lines) {
+        const p = document.createElement('p');
+        if (line) {
+          p.textContent = line;
+        } else {
+          p.appendChild(document.createElement('br'));
+        }
+        input.appendChild(p);
+      }
+    } else {
+      const nextText = currentText ? `${currentText}\n${text}` : text;
+      input.textContent = nextText;
+    }
+    const InputEvt = typeof InputEvent === 'function' ? InputEvent : Event;
+    input.dispatchEvent(new InputEvt('input', { bubbles: true, inputType: 'insertText', data: text }));
   }
 
   updateStatusToast(t().toastPromptInserted, null, null, 2500);
@@ -47,7 +66,10 @@ export function insertPromptIntoChat(text) {
 
 export function openPromptsModal() {
   const existing = document.getElementById('gcm-modal-overlay');
-  if (existing) existing.remove();
+  if (existing) {
+    existing._gcmClose?.(false);
+    existing.remove();
+  }
 
   if (!Array.isArray(state.folderState.prompts)) {
     state.folderState.prompts = t().defaultPrompts.map((p) => ({ ...p }));
@@ -58,6 +80,14 @@ export function openPromptsModal() {
 
   const card = document.createElement('div');
   card.className = 'gcm-modal-card gcm-prompts-modal-card';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+
+  const closeModal = () => {
+    document.removeEventListener('keydown', onEsc);
+    overlay.remove();
+  };
+  overlay._gcmClose = closeModal;
 
   const title = document.createElement('div');
   title.className = 'gcm-modal-title gcm-modal-title-icon';
@@ -105,7 +135,7 @@ export function openPromptsModal() {
       useBtn.textContent = t().insertPromptBtn;
       useBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        overlay.remove();
+        closeModal();
         insertPromptIntoChat(p.content);
       });
 
@@ -124,7 +154,7 @@ export function openPromptsModal() {
       itemActions.appendChild(delBtn);
 
       item.addEventListener('click', () => {
-        overlay.remove();
+        closeModal();
         insertPromptIntoChat(p.content);
       });
 
@@ -160,7 +190,7 @@ export function openPromptsModal() {
       return;
     }
     state.folderState.prompts.push({
-      id: 'p_' + Date.now().toString(36),
+      id: 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
       title: newTitle,
       content: newBody + '\n\n'
     });
@@ -180,20 +210,19 @@ export function openPromptsModal() {
   const closeBtn = document.createElement('button');
   closeBtn.className = 'gcm-btn gcm-btn-cancel';
   closeBtn.textContent = t().cancel;
-  closeBtn.addEventListener('click', () => overlay.remove());
+  closeBtn.addEventListener('click', closeModal);
 
   actions.appendChild(closeBtn);
 
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) closeModal();
   });
 
-  const onEsc = (e) => {
+  function onEsc(e) {
     if (e.key === 'Escape') {
-      overlay.remove();
-      document.removeEventListener('keydown', onEsc);
+      closeModal();
     }
-  };
+  }
   document.addEventListener('keydown', onEsc);
 
   card.appendChild(title);

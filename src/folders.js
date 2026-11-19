@@ -63,7 +63,17 @@ export function applyFolderBadgesAndFilter(items) {
         lockEl.className = 'gcm-lock-icon';
         lockEl.appendChild(createIconElement(ICONS.lockSmall));
         lockEl.title = t().lockIconTitle;
+        lockEl.setAttribute('role', 'button');
+        lockEl.setAttribute('tabindex', '0');
+        lockEl.setAttribute('aria-label', t().lockIconTitle);
         lockEl.dataset.convId = id;
+        lockEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            lockEl.click();
+          }
+        });
         row.appendChild(lockEl);
       }
     } else if (lockEl) {
@@ -77,6 +87,7 @@ export function applyFolderBadgesAndFilter(items) {
         badge.className = 'gcm-chat-badge';
         row.appendChild(badge);
       }
+      badge.title = folder.name;
       const badgeSig = `${folder.id}:${folder.name}:${folder.color}`;
       if (badge.dataset.sig !== badgeSig) {
         badge.dataset.sig = badgeSig;

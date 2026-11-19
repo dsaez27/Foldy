@@ -1,4 +1,4 @@
-# 📦 ChatFold Changelog / Historial de Versiones
+# 📦 Foldy Changelog / Historial de Versiones
 
 > **Release Notes Policy / Política de Versiones**: All release notes must be provided in **English first**, followed by **Spanish**. / Todas las notas de versión deben publicarse en **inglés primero** y luego en **español**.
 

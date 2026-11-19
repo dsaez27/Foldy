@@ -6,13 +6,22 @@ import { sleep } from './utils.js';
 
 function findScrollContainer(targetRow) {
   let scroller = targetRow?.parentElement || null;
+  let fallbackScroller = null;
   while (scroller && scroller !== document.body && scroller !== document.documentElement) {
     if (scroller.scrollHeight > scroller.clientHeight + 10) {
-      return scroller;
+      if (!fallbackScroller) fallbackScroller = scroller;
+      try {
+        const overflowY = typeof getComputedStyle === 'function' ? getComputedStyle(scroller).overflowY : '';
+        if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') {
+          return scroller;
+        }
+      } catch (_) {
+        return scroller;
+      }
     }
     scroller = scroller.parentElement;
   }
-  return null;
+  return fallbackScroller;
 }
 
 /**

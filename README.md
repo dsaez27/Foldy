@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="assets/foldy-full.png" alt="Foldy" width="380" />
+  <img src="assets/foldy-full.svg" alt="Foldy" width="380" />
 </p>
 
 # Foldy v3.5.6: Gestor Universal de Carpetas para Gemini, ChatGPT, Claude, DeepSeek & OpenCode
 
 **Foldy** es una extensión de Chrome (Manifest V3) que transforma tu experiencia en **Google Gemini**, **OpenAI ChatGPT**, **Anthropic Claude**, **DeepSeek** y **OpenCode**: añade carpetas inteligentes con clasificación automática por palabras clave, sincronización en la nube (`chrome.storage.sync`), bóveda de Prompts rápidos, popup de control, atajos de teclado, barra superior contraíble, búsqueda instantánea, protección de chats con candado, selección múltiple, borrado masivo seguro, exportación a Markdown y respaldo/importación en JSON.
 
-## Novedades en v3.4.0
+## Novedades en v3.5.6
 
 - 🌐 **Soporte Universal Multi-IA**: Compatible con **Gemini**, **ChatGPT**, **Claude**, **DeepSeek** y **OpenCode**.
 - ☁️ **Cloud Sync Automático (`chrome.storage.sync`)**: Sincroniza carpetas, reglas, asignaciones, chats protegidos y prompts entre tus dispositivos.
@@ -35,7 +35,7 @@
 │   ├── markdown-export.js    Exportar a Markdown
 │   ├── autoscroll.js         Carga automática del historial
 │   └── utils.js              Utilidades de DOM (clic real, polling)
-├── tests/                    23 pruebas automatizadas (node:test + jsdom)
+├── tests/                    Pruebas automatizadas unitarias y de integración (node:test + jsdom)
 ├── scripts/build.mjs         Empaquetado con esbuild
 └── extension/                ← la extensión lista para cargar en Chrome
     ├── manifest.json
@@ -52,6 +52,6 @@ npm install
 npm run build    # genera content.js dentro de extension/
 npm run watch    # recompila al guardar
 npm run lint     # ESLint (0 errores)
-npm test         # 23 pruebas unitarias y de integración (jsdom)
+npm test         # Suite completa de pruebas unitarias y de integración (jsdom)
 npm run check    # lint + tests + build
 ```

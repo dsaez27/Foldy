@@ -57,12 +57,20 @@ export function toggleMoveToFolderPopover(anchorBtn) {
   const rect = anchorBtn.getBoundingClientRect();
   const popover = document.createElement('div');
   popover.id = 'gcm-folder-popover';
+  popover.setAttribute('role', 'menu');
   popover.style.top = `${rect.bottom + 8}px`;
   popover.style.left = `${Math.max(12, rect.left - 30)}px`;
+
+  const closePopover = () => {
+    popover.remove();
+    document.removeEventListener('mousedown', closeOnOutside);
+    document.removeEventListener('keydown', closeOnEsc);
+  };
 
   state.folderState.folders.forEach((f) => {
     const item = document.createElement('button');
     item.className = 'gcm-popover-item';
+    item.setAttribute('role', 'menuitem');
 
     const dot = document.createElement('span');
     dot.className = 'gcm-folder-dot';
@@ -77,7 +85,7 @@ export function toggleMoveToFolderPopover(anchorBtn) {
 
     item.addEventListener('click', () => {
       assignSelectedToFolder(f.id);
-      popover.remove();
+      closePopover();
     });
     popover.appendChild(item);
   });
@@ -88,19 +96,20 @@ export function toggleMoveToFolderPopover(anchorBtn) {
 
   const removeBtn = document.createElement('button');
   removeBtn.className = 'gcm-popover-item';
+  removeBtn.setAttribute('role', 'menuitem');
   setButtonIconText(removeBtn, ICONS.folderMinus, t().removeFromFolder);
   removeBtn.addEventListener('click', () => {
     assignSelectedToFolder(null);
-    popover.remove();
+    closePopover();
   });
   popover.appendChild(removeBtn);
 
   const createNewBtn = document.createElement('button');
-  createNewBtn.className = 'gcm-popover-item';
-  createNewBtn.style.color = '#a8c7fa';
+  createNewBtn.className = 'gcm-popover-item gcm-popover-item-accent';
+  createNewBtn.setAttribute('role', 'menuitem');
   setButtonIconText(createNewBtn, ICONS.folderPlus, t().createNewFolderMenu);
   createNewBtn.addEventListener('click', () => {
-    popover.remove();
+    closePopover();
     openCreateFolderModal((newFolder) => {
       assignSelectedToFolder(newFolder.id);
     });
@@ -118,10 +127,15 @@ export function toggleMoveToFolderPopover(anchorBtn) {
 
   const closeOnOutside = (e) => {
     if (!popover.contains(e.target) && e.target !== anchorBtn) {
-      popover.remove();
-      document.removeEventListener('mousedown', closeOnOutside);
+      closePopover();
     }
   };
+  const closeOnEsc = (e) => {
+    if (e.key === 'Escape') {
+      closePopover();
+    }
+  };
+  document.addEventListener('keydown', closeOnEsc);
   setTimeout(() => document.addEventListener('mousedown', closeOnOutside), 20);
 }
 
@@ -150,6 +164,9 @@ function assignSelectedToFolder(folderId) {
 }
 
 export function setupDelegatedSidebarListener() {
+  if (state.delegatedListenerAttached) return;
+  state.delegatedListenerAttached = true;
+
   const stopPressOnControls = (e) => {
     const target = e.target;
     if (!(target instanceof Element)) return;
@@ -182,6 +199,7 @@ export function setupDelegatedSidebarListener() {
           delete state.folderState.protectedIds[id];
           saveFolderData(state.folderState);
           refreshUI();
+          updateStatusToast(t().toastUnprotected(1), null, null, 2500);
         }
         return;
       }
@@ -201,11 +219,11 @@ export function setupDelegatedSidebarListener() {
           state.autoSelectAllMode = false;
           if (state.autoScrollActive) state.autoScrollActive = false;
         }
-        const applyCbState = (cb, r, cbId, state) => {
-          cb.checked = state;
-          cb.classList.toggle('gcm-checked', state);
-          if (state) {
-            selectedMap.set(cbId, { id: cbId });
+        const applyCbState = (cb, r, cbId, isChecked) => {
+          cb.checked = isChecked;
+          cb.classList.toggle('gcm-checked', isChecked);
+          if (isChecked) {
+            selectedMap.set(cbId, { id: cbId, title: r.textContent?.trim() || cbId });
             r.classList.add('gcm-selected');
           } else {
             selectedMap.delete(cbId);
@@ -221,9 +239,10 @@ export function setupDelegatedSidebarListener() {
           return r && !r.classList.contains('gcm-hidden-by-filter');
         });
 
-        if (e.shiftKey && state.lastCheckedCheckbox && state.lastCheckedCheckbox !== checkbox) {
-          const start = visibleCheckboxes.indexOf(state.lastCheckedCheckbox);
-          const end = visibleCheckboxes.indexOf(checkbox);
+        const anchorId = state.lastCheckedConvId || state.lastCheckedCheckbox?.dataset?.convId;
+        if (e.shiftKey && anchorId && anchorId !== id) {
+          const start = visibleCheckboxes.findIndex((cb) => cb.dataset.convId === anchorId);
+          const end = visibleCheckboxes.findIndex((cb) => cb === checkbox || cb.dataset.convId === id);
 
           if (start !== -1 && end !== -1) {
             const [low, high] = [Math.min(start, end), Math.max(start, end)];
@@ -256,6 +275,7 @@ export function setupDelegatedSidebarListener() {
         setTimeout(syncNativeChecked, 0);
 
         state.lastCheckedCheckbox = checkbox;
+        state.lastCheckedConvId = id;
         updateToolbarState();
       }
     },
@@ -265,12 +285,12 @@ export function setupDelegatedSidebarListener() {
 
 export function injectCheckboxes(items) {
   for (let i = 0; i < items.length; i++) {
-    const { id, row } = items[i];
+    const { id, row, title } = items[i];
     if (!row.classList.contains('gcm-chat-row')) {
       row.classList.add('gcm-chat-row');
     }
     if (state.autoSelectAllMode && !row.classList.contains('gcm-hidden-by-filter') && !selectedMap.has(id)) {
-      selectedMap.set(id, { id });
+      selectedMap.set(id, { id, title: title || row.textContent?.trim() || id });
     }
     const isSelected = selectedMap.has(id);
 
@@ -298,11 +318,21 @@ export function injectCheckboxes(items) {
 }
 
 export function toggleSelectAll(checked) {
-  state.autoSelectAllMode = !!checked;
+  if (!checked) {
+    clearAllSelections();
+    updateToolbarState();
+    if (state.autoScrollActive) {
+      state.autoScrollActive = false;
+      refreshUI();
+    }
+    return;
+  }
+
+  state.autoSelectAllMode = true;
   const selectAllCb = document.getElementById('gcm-select-all');
   if (selectAllCb) {
-    selectAllCb.checked = checked;
-    selectAllCb.classList.toggle('gcm-checked', checked);
+    selectAllCb.checked = true;
+    selectAllCb.classList.add('gcm-checked');
   }
   const sidebar = getSidebarElement() || document;
   const checkboxes = Array.from(sidebar.querySelectorAll('.gcm-checkbox:not(#gcm-select-all)')).filter((cb) => {
@@ -310,27 +340,17 @@ export function toggleSelectAll(checked) {
     return r && !r.classList.contains('gcm-hidden-by-filter');
   });
   checkboxes.forEach((cb) => {
-    cb.checked = checked;
-    cb.classList.toggle('gcm-checked', checked);
+    cb.checked = true;
+    cb.classList.add('gcm-checked');
     const id = cb.dataset.convId;
     const row = cb.closest('.gcm-chat-row') || cb.parentElement;
     if (id && row) {
-      if (checked) {
-        selectedMap.set(id, { id });
-        row.classList.add('gcm-selected');
-      } else {
-        selectedMap.delete(id);
-        row.classList.remove('gcm-selected');
-      }
+      selectedMap.set(id, { id, title: row.textContent?.trim() || id });
+      row.classList.add('gcm-selected');
     }
   });
   updateToolbarState();
-  if (checked) {
-    if (!state.autoScrollActive) {
-      toggleAutoScrollHistory({ silent: true });
-    }
-  } else if (state.autoScrollActive) {
-    state.autoScrollActive = false;
-    refreshUI();
+  if (!state.autoScrollActive) {
+    toggleAutoScrollHistory({ silent: true });
   }
 }

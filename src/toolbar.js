@@ -120,12 +120,18 @@ export function applyToolbarLayout() {
 
   collapseBtn.textContent = '';
   collapseBtn.appendChild(createIconElement(state.toolbarCollapsed ? ICONS.menu : ICONS.chevronRight));
-  collapseBtn.title = state.toolbarCollapsed ? t().toolbarExpandTitle : t().toolbarCollapseTitle;
+  const collapseTitle = state.toolbarCollapsed ? t().toolbarExpandTitle : t().toolbarCollapseTitle;
+  collapseBtn.title = collapseTitle;
+  collapseBtn.setAttribute('aria-label', collapseTitle);
+  collapseBtn.setAttribute('aria-expanded', String(!state.toolbarCollapsed));
 
   if (orientBtn) {
     orientBtn.textContent = '';
     orientBtn.appendChild(createIconElement(state.toolbarVertical ? ICONS.layoutHorizontal : ICONS.layoutVertical));
-    orientBtn.title = state.toolbarVertical ? t().toolbarHorizontalTitle : t().toolbarVerticalTitle;
+    const orientTitle = state.toolbarVertical ? t().toolbarHorizontalTitle : t().toolbarVerticalTitle;
+    orientBtn.title = orientTitle;
+    orientBtn.setAttribute('aria-label', orientTitle);
+    orientBtn.setAttribute('aria-expanded', String(!state.toolbarCollapsed));
   }
 
   clampToolbarPosition(toolbar);

@@ -16,11 +16,17 @@ export function exportSelectedConversationsToMarkdown() {
   const allMessages = Array.from(document.querySelectorAll(SELECTORS.activeMessages));
   const messages = allMessages.filter((m) => !allMessages.some((o) => o !== m && o.contains(m)));
 
+  if (selectedIds.length === 0 && messages.length === 0) {
+    updateStatusToast(t().toastMdEmpty || t().toastMdExported, null, null, 2800);
+    return false;
+  }
+
   if (selectedIds.length > 0) {
     markdown += `## ${t().mdSelectedIndex(selectedIds.length)}\n\n`;
     selectedIds.forEach((id, idx) => {
       const rowObj = items.find((it) => it.id === id);
-      const title = (rowObj?.title || id).replace(/[[\]\r\n]/g, ' ').trim();
+      const fallbackTitle = selectedMap.get(id)?.title || id;
+      const title = (rowObj?.title || fallbackTitle).replace(/[[\]\r\n]/g, ' ').trim();
       const folderName = folderLookup.get(state.folderState.assignments[id]) || t().pillUnassigned;
       const isLocked = state.folderState.protectedIds[id] ? ' 🔒' : '';
       markdown += `${idx + 1}. **[${title}](${P.buildUrl(id)})** — *${t().mdFolderLabel}: ${folderName}*${isLocked}\n`;

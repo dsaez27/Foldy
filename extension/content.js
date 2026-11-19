@@ -29,36 +29,40 @@
       children
     );
   }
+  var logoGradSeq = 0;
   var ICONS = {
-    chatfoldLogo: () => el(
-      "svg",
-      {
-        class: "gcm-svg-logo",
-        viewBox: "0 0 1024 1024",
-        width: 18,
-        height: 18,
-        fill: "none"
-      },
-      [
-        el("defs", {}, [
-          el("linearGradient", { id: "gcmLogoGrad", x1: "0%", y1: "0%", x2: "100%", y2: "100%" }, [
-            el("stop", { offset: "0%", "stop-color": "#5B6EF7" }),
-            el("stop", { offset: "50%", "stop-color": "#3B82F6" }),
-            el("stop", { offset: "100%", "stop-color": "#1DA1F2" })
-          ])
-        ]),
-        el("path", {
-          d: "M280 120 L590 120 L844 374 L844 630 A170 170 0 0 1 674 800 L455 800 L295 940 L295 800 L280 800 A170 170 0 0 1 110 630 L110 290 A170 170 0 0 1 280 120 Z",
-          fill: "url(#gcmLogoGrad)"
-        }),
-        el("path", {
-          d: "M590 120 L844 374 L690 374 A100 100 0 0 1 590 274 Z",
-          fill: "#132238"
-        }),
-        el("rect", { x: 275, y: 405, width: 315, height: 62, rx: 31, fill: "#FFFFFF" }),
-        el("rect", { x: 275, y: 535, width: 415, height: 62, rx: 31, fill: "#CBE7FB" })
-      ]
-    ),
+    foldyLogo: () => {
+      const gradId = `gcmLogoGrad_${++logoGradSeq}`;
+      return el(
+        "svg",
+        {
+          class: "gcm-svg-logo",
+          viewBox: "0 0 1024 1024",
+          width: 18,
+          height: 18,
+          fill: "none"
+        },
+        [
+          el("defs", {}, [
+            el("linearGradient", { id: gradId, x1: "0%", y1: "0%", x2: "100%", y2: "100%" }, [
+              el("stop", { offset: "0%", "stop-color": "#5B6EF7" }),
+              el("stop", { offset: "50%", "stop-color": "#3B82F6" }),
+              el("stop", { offset: "100%", "stop-color": "#1DA1F2" })
+            ])
+          ]),
+          el("path", {
+            d: "M280 120 L590 120 L844 374 L844 630 A170 170 0 0 1 674 800 L455 800 L295 940 L295 800 L280 800 A170 170 0 0 1 110 630 L110 290 A170 170 0 0 1 280 120 Z",
+            fill: `url(#${gradId})`
+          }),
+          el("path", {
+            d: "M590 120 L844 374 L690 374 A100 100 0 0 1 590 274 Z",
+            fill: "#132238"
+          }),
+          el("rect", { x: 275, y: 405, width: 315, height: 62, rx: 31, fill: "#FFFFFF" }),
+          el("rect", { x: 275, y: 535, width: 415, height: 62, rx: 31, fill: "#CBE7FB" })
+        ]
+      );
+    },
     folderPlus: () => strokeSvg(14, 2, [
       el("path", { d: "M12 10v6" }),
       el("path", { d: "M9 13h6" }),
@@ -234,7 +238,7 @@
       name: "ChatGPT",
       storageKey: "gcm_chatgpt_folders_data_v1",
       legacyStorageKey: null,
-      convHrefRegex: /\/(?:c|codex\/tasks|codex\/cloud|codex|tasks)\/([0-9a-zA-Z_-]{5,})/,
+      convHrefRegex: /\/(?:c|codex\/tasks|codex\/cloud|codex|tasks)\/(?!settings|overview|scheduled|onboarding|new\b)(task_[0-9a-zA-Z_-]{4,}|[0-9a-fA-F]{8}-[0-9a-fA-F-]{27}|[0-9a-zA-Z_-]{8,})/,
       buildUrl: (id) => id.startsWith("task_") ? `https://chatgpt.com/codex/tasks/${id}` : `https://chatgpt.com/c/${id}`,
       selectors: {
         sidebar: '[data-testid="stage-thread-flyout"], nav[aria-label], nav, aside, .bg-token-sidebar-surface-primary',
@@ -320,6 +324,63 @@
   var P = PLATFORMS[PLATFORM_KEY] || PLATFORMS.gemini;
   var SELECTORS = P.selectors;
   var PRESET_COLORS = ["#4285f4", "#34a853", "#fbbc04", "#ea4335", "#a142f4", "#24c1e0", "#ff6d00"];
+  function parseRgbLuminance(colorStr) {
+    if (!colorStr || typeof colorStr !== "string") return null;
+    const m = colorStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+    if (!m) return null;
+    if (m[4] !== void 0 && parseFloat(m[4]) === 0) return null;
+    const r = Number(m[1]);
+    const g = Number(m[2]);
+    const b = Number(m[3]);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  }
+  function detectHostTheme() {
+    try {
+      const html = document.documentElement;
+      const body = document.body;
+      const nodes = [html, body].filter(Boolean);
+      for (const el2 of nodes) {
+        for (const attr of ["data-theme", "data-color-scheme", "data-mode"]) {
+          const val = (el2.getAttribute?.(attr) || "").toLowerCase();
+          if (val.includes("light")) return "light";
+          if (val.includes("dark")) return "dark";
+        }
+        const cls = el2.classList;
+        if (cls) {
+          if (cls.contains("light") || cls.contains("light-theme")) return "light";
+          if (cls.contains("dark") || cls.contains("dark-theme")) return "dark";
+        }
+      }
+      if (typeof getComputedStyle === "function") {
+        if (html) {
+          const cs = (getComputedStyle(html).colorScheme || "").toLowerCase();
+          if (cs === "light") return "light";
+          if (cs === "dark") return "dark";
+        }
+        for (const el2 of [body, html].filter(Boolean)) {
+          const lum = parseRgbLuminance(getComputedStyle(el2).backgroundColor);
+          if (lum !== null) {
+            return lum > 0.55 ? "light" : "dark";
+          }
+        }
+      }
+      if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+        if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+          return "light";
+        }
+      }
+    } catch (_) {
+    }
+    return "dark";
+  }
+  function syncHostTheme() {
+    const theme = detectHostTheme();
+    try {
+      document.documentElement?.setAttribute("data-gcm-theme", theme);
+    } catch (_) {
+    }
+    return theme;
+  }
 
   // src/i18n.js
   var I18N = {
@@ -381,6 +442,7 @@
       toastBackupRestored: "📂 Carpetas y configuración restauradas.",
       toastBackupInvalid: "❌ Archivo JSON inválido.",
       toastMdExported: "📥 Archivo Markdown (.md) descargado.",
+      toastMdEmpty: "⚠️ No hay conversaciones seleccionadas ni mensajes activos para exportar.",
       toastUnprotected: (n) => `🔓 Se quitó la protección de ${n} conversación(es).`,
       toastProtected: (n) => `🔒 ${n} conversación(es) protegida(s) contra borrado accidental.`,
       toastMovedToFolder: (n) => `📁 ${n} conversación(es) movida(s) a la carpeta.`,
@@ -490,6 +552,7 @@
       toastBackupRestored: "📂 Folders and settings restored.",
       toastBackupInvalid: "❌ Invalid JSON file.",
       toastMdExported: "📥 Markdown (.md) file downloaded.",
+      toastMdEmpty: "⚠️ No selected conversations or active messages to export.",
       toastUnprotected: (n) => `🔓 Removed protection from ${n} conversation(s).`,
       toastProtected: (n) => `🔒 ${n} conversation(s) protected from accidental deletion.`,
       toastMovedToFolder: (n) => `📁 ${n} conversation(s) moved to folder.`,
@@ -548,8 +611,19 @@
   }
 
   // src/storage.js
+  function sanitizeMap(src, mapValue) {
+    const out = {};
+    if (!src || typeof src !== "object" || Array.isArray(src)) return out;
+    for (const key of Object.keys(src)) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+      const v = mapValue(src[key]);
+      if (v !== void 0) out[key] = v;
+    }
+    return out;
+  }
   function normalizeStoredState(parsed, defaultLang) {
     const isPlainObj = (o) => o && typeof o === "object" && !Array.isArray(o);
+    parsed = isPlainObj(parsed) ? parsed : {};
     const lang = parsed.lang === "en" || parsed.lang === "es" ? parsed.lang : defaultLang;
     const fallbackPrompts = (I18N[lang]?.defaultPrompts || I18N.es.defaultPrompts).map((p) => ({ ...p }));
     return {
@@ -557,7 +631,7 @@
       folders: Array.isArray(parsed.folders) ? parsed.folders.filter((f) => f && typeof f.id === "string" && typeof f.name === "string").map((f) => ({
         id: f.id,
         name: f.name,
-        color: f.color || "#4285f4",
+        color: /^#[0-9a-fA-F]{6}$/.test(f.color) ? f.color : "#4285f4",
         keywords: Array.isArray(f.keywords) ? f.keywords.filter((k) => typeof k === "string").map((k) => k.toLowerCase()) : []
       })) : [],
       prompts: Array.isArray(parsed.prompts) ? parsed.prompts.filter((p) => p && typeof p.id === "string" && typeof p.title === "string" && typeof p.content === "string").map((p) => ({
@@ -565,8 +639,8 @@
         title: p.title,
         content: p.content
       })) : fallbackPrompts,
-      assignments: isPlainObj(parsed.assignments) ? parsed.assignments : {},
-      protectedIds: isPlainObj(parsed.protectedIds) ? parsed.protectedIds : {},
+      assignments: sanitizeMap(parsed.assignments, (v) => typeof v === "string" && v ? v : void 0),
+      protectedIds: sanitizeMap(parsed.protectedIds, (v) => v ? true : void 0),
       minimized: !!parsed.minimized,
       pos: parsed.pos && Number.isFinite(parsed.pos.left) && Number.isFinite(parsed.pos.bottom) ? { left: parsed.pos.left, bottom: parsed.pos.bottom } : null,
       toolbarPos: parsed.toolbarPos && Number.isFinite(parsed.toolbarPos.left) && Number.isFinite(parsed.toolbarPos.top) ? { left: parsed.toolbarPos.left, top: parsed.toolbarPos.top } : null,
@@ -602,36 +676,101 @@
     saveFolderData(initial);
     return initial;
   }
-  function saveFolderData(data) {
+  var lastSelfWrittenSyncJson = null;
+  function buildQuotaSafeSyncPayload(syncPayload) {
+    const rawJson = JSON.stringify(syncPayload);
+    if (rawJson.length <= 7200) return { payload: syncPayload, json: rawJson };
+    const base = {
+      lang: syncPayload.lang,
+      minimized: !!syncPayload.minimized,
+      folders: Array.isArray(syncPayload.folders) ? syncPayload.folders : [],
+      prompts: Array.isArray(syncPayload.prompts) ? syncPayload.prompts.slice(0, 15) : [],
+      protectedIds: {},
+      assignments: {}
+    };
+    let size = JSON.stringify(base).length;
+    const protEntries = Object.entries(syncPayload.protectedIds || {});
+    for (let i = protEntries.length - 1; i >= 0; i--) {
+      const [k, v] = protEntries[i];
+      const entryLen = k.length + 10;
+      if (size + entryLen > 4500) break;
+      base.protectedIds[k] = v;
+      size += entryLen;
+    }
+    const assignEntries = Object.entries(syncPayload.assignments || {});
+    for (let i = assignEntries.length - 1; i >= 0; i--) {
+      const [k, v] = assignEntries[i];
+      const entryLen = k.length + String(v).length + 8;
+      if (size + entryLen > 7e3) break;
+      base.assignments[k] = v;
+      size += entryLen;
+    }
+    let finalJson = JSON.stringify(base);
+    if (finalJson.length > 7400) {
+      base.prompts = [];
+      finalJson = JSON.stringify(base);
+    }
+    return { payload: base, json: finalJson };
+  }
+  function saveFolderData(data, options = {}) {
     try {
       localStorage.setItem(P.storageKey, JSON.stringify(data));
     } catch (_) {
     }
+    if (options.localOnly) return;
     try {
       if (typeof chrome !== "undefined" && chrome.storage?.sync?.set) {
         const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = data;
-        chrome.storage.sync.set({ [P.storageKey]: syncPayload });
+        const { payload, json: nextJson } = buildQuotaSafeSyncPayload(syncPayload);
+        if (nextJson === lastSelfWrittenSyncJson) return;
+        lastSelfWrittenSyncJson = nextJson;
+        chrome.storage.sync.set({ [P.storageKey]: payload }, () => {
+          void chrome.runtime?.lastError;
+        });
       }
     } catch (_) {
     }
+  }
+  function mergeFoldersOrPrompts(cloudArr, localArr) {
+    if (!Array.isArray(cloudArr) || cloudArr.length === 0) return Array.isArray(localArr) ? localArr : [];
+    if (!Array.isArray(localArr) || localArr.length === 0) return cloudArr;
+    const seen = new Set(cloudArr.map((item) => item?.id).filter(Boolean));
+    const combined = [...cloudArr];
+    for (const item of localArr) {
+      if (item?.id && !seen.has(item.id)) {
+        seen.add(item.id);
+        combined.push(item);
+      }
+    }
+    return combined;
   }
   function initCloudSync(getState, applyIncoming) {
     try {
       if (typeof chrome === "undefined" || !chrome.storage?.sync?.get) return;
       chrome.storage.sync.get([P.storageKey], (res) => {
         try {
+          void chrome.runtime?.lastError;
           const cloudData = res?.[P.storageKey];
           const current = getState();
           if (cloudData && typeof cloudData === "object") {
-            const merged = normalizeStoredState(
-              { ...cloudData, pos: current.pos, toolbarPos: current.toolbarPos, view: current.view },
-              current.lang
-            );
+            const mergedRaw = {
+              ...current,
+              ...cloudData,
+              folders: mergeFoldersOrPrompts(cloudData.folders, current.folders),
+              prompts: mergeFoldersOrPrompts(cloudData.prompts, current.prompts),
+              assignments: { ...current.assignments || {}, ...cloudData.assignments || {} },
+              protectedIds: { ...current.protectedIds || {}, ...cloudData.protectedIds || {} },
+              pos: current.pos,
+              toolbarPos: current.toolbarPos,
+              view: current.view
+            };
+            const merged = normalizeStoredState(mergedRaw, current.lang);
+            const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = merged;
+            lastSelfWrittenSyncJson = buildQuotaSafeSyncPayload(syncPayload).json;
             localStorage.setItem(P.storageKey, JSON.stringify(merged));
             applyIncoming(merged);
           } else {
-            const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = current;
-            chrome.storage.sync.set({ [P.storageKey]: syncPayload });
+            saveFolderData(current);
           }
         } catch (_) {
         }
@@ -640,11 +779,20 @@
         chrome.storage.onChanged.addListener((changes, area) => {
           if (area !== "sync" || !changes[P.storageKey]?.newValue) return;
           try {
+            const incomingVal = changes[P.storageKey].newValue;
+            const incomingJson = JSON.stringify(incomingVal);
+            if (incomingJson === lastSelfWrittenSyncJson) return;
             const current = getState();
             const merged = normalizeStoredState(
-              { ...changes[P.storageKey].newValue, pos: current.pos, toolbarPos: current.toolbarPos, view: current.view },
+              {
+                ...incomingVal,
+                pos: current.pos,
+                toolbarPos: current.toolbarPos,
+                view: current.view
+              },
               current.lang
             );
+            lastSelfWrittenSyncJson = incomingJson;
             localStorage.setItem(P.storageKey, JSON.stringify(merged));
             applyIncoming(merged);
           } catch (_) {
@@ -674,6 +822,8 @@
     deletionInProgress: false,
     deletionStopRequested: false,
     lastCheckedCheckbox: null,
+    lastCheckedConvId: null,
+    delegatedListenerAttached: false,
     cachedSidebarEl: null,
     cachedChatGptToken: null,
     panelJustDragged: false,
@@ -692,7 +842,7 @@
       toolbarCollapsed: state.toolbarCollapsed,
       toolbarVertical: state.toolbarVertical
     };
-    saveFolderData(state.folderState);
+    saveFolderData(state.folderState, { localOnly: true });
   }
 
   // src/sidebar.js
@@ -772,12 +922,24 @@
     }
     const jslog = el2.getAttribute?.("jslog") || "";
     if (jslog) {
-      try {
-        const id = "conv_" + btoa(encodeURIComponent(jslog)).slice(0, 16);
-        rowIdCache.set(el2, { href: jslog, id });
-        return id;
-      } catch (_) {
+      const cachedJslog = rowIdCache.get(el2);
+      if (cachedJslog && cachedJslog.href === jslog) return cachedJslog.id;
+      const cMatch = /\bc_([0-9a-fA-F]{8,})\b/.exec(jslog);
+      if (cMatch) {
+        const id2 = `c_${cMatch[1]}`;
+        rowIdCache.set(el2, { href: jslog, id: id2 });
+        return id2;
       }
+      let h1 = 2166136261;
+      let h2 = 16777619;
+      for (let i = 0; i < jslog.length; i++) {
+        const ch = jslog.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 16777619) >>> 0;
+        h2 = Math.imul(h2 ^ (ch << 5 | ch >>> 3), 2166136261) >>> 0;
+      }
+      const id = `conv_${h1.toString(36)}_${h2.toString(36)}`;
+      rowIdCache.set(el2, { href: jslog, id });
+      return id;
     }
     const keyHolder = (el2.hasAttribute?.("data-sidebar-chatgpt-conversation-key") ? el2 : null) || el2.closest?.("[data-sidebar-chatgpt-conversation-key]") || el2.querySelector?.("[data-sidebar-chatgpt-conversation-key]");
     if (keyHolder) {
@@ -917,18 +1079,26 @@
         }
       }
       for (let i = 0; i < extraCandidates.length; i++) {
+        const r = findRowContainer(extraCandidates[i]);
+        const existingId = r?.getAttribute?.("data-gcm-conv-id");
+        if (existingId) seenIds.add(existingId);
+      }
+      for (let i = 0; i < extraCandidates.length; i++) {
         const el2 = extraCandidates[i];
         const row = findRowContainer(el2);
         if (seenRows.has(row)) continue;
         if (!isLikelyChatGptCloudRow(row, historyContainers)) continue;
         const title = extractConvTitle(row, "");
-        let id = parseConvId(row) || slugifyTitleForTaskId(title);
-        if (seenIds.has(id)) {
+        const existingId = row.getAttribute?.("data-gcm-conv-id");
+        let id = existingId || parseConvId(row) || slugifyTitleForTaskId(title);
+        if (!existingId && seenIds.has(id)) {
           let suffix = 2;
           while (seenIds.has(`${id}_${suffix}`)) suffix++;
           id = `${id}_${suffix}`;
         }
-        row.setAttribute("data-gcm-conv-id", id);
+        if (!existingId) {
+          row.setAttribute("data-gcm-conv-id", id);
+        }
         row.setAttribute("data-gcm-task", "1");
         seenRows.add(row);
         seenIds.add(id);
@@ -996,7 +1166,17 @@
           lockEl.className = "gcm-lock-icon";
           lockEl.appendChild(createIconElement(ICONS.lockSmall));
           lockEl.title = t().lockIconTitle;
+          lockEl.setAttribute("role", "button");
+          lockEl.setAttribute("tabindex", "0");
+          lockEl.setAttribute("aria-label", t().lockIconTitle);
           lockEl.dataset.convId = id;
+          lockEl.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              lockEl.click();
+            }
+          });
           row.appendChild(lockEl);
         }
       } else if (lockEl) {
@@ -1009,6 +1189,7 @@
           badge.className = "gcm-chat-badge";
           row.appendChild(badge);
         }
+        badge.title = folder.name;
         const badgeSig = `${folder.id}:${folder.name}:${folder.color}`;
         if (badge.dataset.sig !== badgeSig) {
           badge.dataset.sig = badgeSig;
@@ -1099,12 +1280,22 @@
   // src/dialogs.js
   function openCreateFolderModal(onCreatedCallback = null) {
     const existing = document.getElementById("gcm-modal-overlay");
-    if (existing) existing.remove();
+    if (existing) {
+      existing._gcmClose?.(false);
+      existing.remove();
+    }
     let chosenColor = PRESET_COLORS[state.folderState.folders.length % PRESET_COLORS.length];
     const overlay = document.createElement("div");
     overlay.id = "gcm-modal-overlay";
     const card = document.createElement("div");
     card.className = "gcm-modal-card";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    const closeModal = () => {
+      document.removeEventListener("keydown", onEsc);
+      overlay.remove();
+    };
+    overlay._gcmClose = closeModal;
     const title = document.createElement("div");
     title.className = "gcm-modal-title";
     title.textContent = t().modalNewFolderTitle;
@@ -1122,13 +1313,20 @@
     const colorRow = document.createElement("div");
     colorRow.className = "gcm-color-picker-row";
     PRESET_COLORS.forEach((col) => {
-      const swatch = document.createElement("div");
+      const swatch = document.createElement("button");
+      swatch.type = "button";
       swatch.className = "gcm-color-swatch" + (col === chosenColor ? " selected" : "");
       swatch.style.backgroundColor = col;
+      swatch.setAttribute("aria-label", col);
+      swatch.setAttribute("aria-pressed", col === chosenColor ? "true" : "false");
       swatch.addEventListener("click", () => {
         chosenColor = col;
-        colorRow.querySelectorAll(".gcm-color-swatch").forEach((s) => s.classList.remove("selected"));
+        colorRow.querySelectorAll(".gcm-color-swatch").forEach((s) => {
+          s.classList.remove("selected");
+          s.setAttribute("aria-pressed", "false");
+        });
         swatch.classList.add("selected");
+        swatch.setAttribute("aria-pressed", "true");
       });
       colorRow.appendChild(swatch);
     });
@@ -1137,7 +1335,7 @@
     const cancelBtn = document.createElement("button");
     cancelBtn.className = "gcm-btn gcm-btn-cancel";
     cancelBtn.textContent = t().cancel;
-    cancelBtn.addEventListener("click", () => overlay.remove());
+    cancelBtn.addEventListener("click", closeModal);
     const saveBtn = document.createElement("button");
     saveBtn.className = "gcm-btn gcm-btn-stop";
     saveBtn.textContent = t().createFolderConfirm;
@@ -1149,7 +1347,7 @@
       }
       const keywords = inputKeywords.value.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean);
       const newFolder = {
-        id: "f_" + Date.now().toString(36),
+        id: "f_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
         name,
         color: chosenColor,
         keywords
@@ -1157,7 +1355,7 @@
       state.folderState.folders.push(newFolder);
       autoClassifiedVisited.clear();
       saveFolderData(state.folderState);
-      overlay.remove();
+      closeModal();
       refreshUI();
       if (typeof onCreatedCallback === "function") {
         onCreatedCallback(newFolder);
@@ -1166,14 +1364,20 @@
     saveBtn.addEventListener("click", handleSave);
     inputName.addEventListener("keydown", (e) => {
       if (e.key === "Enter") handleSave();
-      if (e.key === "Escape") overlay.remove();
+      if (e.key === "Escape") closeModal();
     });
     inputKeywords.addEventListener("keydown", (e) => {
       if (e.key === "Enter") handleSave();
-      if (e.key === "Escape") overlay.remove();
+      if (e.key === "Escape") closeModal();
     });
+    function onEsc(e) {
+      if (e.key === "Escape") {
+        closeModal();
+      }
+    }
+    document.addEventListener("keydown", onEsc);
     overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) overlay.remove();
+      if (e.target === overlay) closeModal();
     });
     actions.appendChild(cancelBtn);
     actions.appendChild(saveBtn);
@@ -1190,11 +1394,16 @@
   function showConfirmModal(count, skippedProtectedCount = 0) {
     return new Promise((resolve) => {
       const existing = document.getElementById("gcm-modal-overlay");
-      if (existing) existing.remove();
+      if (existing) {
+        existing._gcmClose?.(false);
+        existing.remove();
+      }
       const overlay = document.createElement("div");
       overlay.id = "gcm-modal-overlay";
       const card = document.createElement("div");
       card.className = "gcm-modal-card";
+      card.setAttribute("role", "dialog");
+      card.setAttribute("aria-modal", "true");
       const title = document.createElement("div");
       title.className = "gcm-modal-title";
       title.textContent = t().confirmDeleteTitle(count);
@@ -1209,10 +1418,21 @@
       const confirmBtn = document.createElement("button");
       confirmBtn.className = "gcm-btn gcm-btn-danger";
       confirmBtn.textContent = t().confirmDeleteBtn(count);
+      let settled = false;
       const close = (result) => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener("keydown", onEsc);
         overlay.remove();
         resolve(result);
       };
+      overlay._gcmClose = close;
+      function onEsc(e) {
+        if (e.key === "Escape") {
+          close(false);
+        }
+      }
+      document.addEventListener("keydown", onEsc);
       cancelBtn.addEventListener("click", () => close(false));
       confirmBtn.addEventListener("click", () => close(true));
       overlay.addEventListener("click", (e) => {
@@ -1232,11 +1452,14 @@
     if (!toast) {
       toast = document.createElement("div");
       toast.id = "gcm-status-toast";
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
       const label = document.createElement("div");
       label.id = "gcm-status-label";
       const track = document.createElement("div");
       track.className = "gcm-progress-track";
       track.id = "gcm-status-track";
+      track.setAttribute("role", "progressbar");
       const fill = document.createElement("div");
       fill.className = "gcm-progress-fill";
       fill.id = "gcm-status-fill";
@@ -1325,13 +1548,22 @@
   // src/autoscroll.js
   function findScrollContainer(targetRow) {
     let scroller = targetRow?.parentElement || null;
+    let fallbackScroller = null;
     while (scroller && scroller !== document.body && scroller !== document.documentElement) {
       if (scroller.scrollHeight > scroller.clientHeight + 10) {
-        return scroller;
+        if (!fallbackScroller) fallbackScroller = scroller;
+        try {
+          const overflowY = typeof getComputedStyle === "function" ? getComputedStyle(scroller).overflowY : "";
+          if (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") {
+            return scroller;
+          }
+        } catch (_) {
+          return scroller;
+        }
       }
       scroller = scroller.parentElement;
     }
-    return null;
+    return fallbackScroller;
   }
   async function pulseScrollInBackground(targetRow) {
     const scroller = findScrollContainer(targetRow);
@@ -1426,17 +1658,51 @@
     setTimeout(() => URL.revokeObjectURL(url), 1500);
     updateStatusToast(t().toastBackupSaved, null, null, 2500);
   }
-  function sanitizeMap(src, mapValue) {
-    const out = {};
-    if (!src || typeof src !== "object" || Array.isArray(src)) return out;
-    for (const key of Object.keys(src)) {
-      if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
-      const v = mapValue(src[key]);
-      if (v !== void 0) out[key] = v;
+  function applyImportedBackupJson(rawText) {
+    try {
+      const parsed = JSON.parse(String(rawText));
+      if (Array.isArray(parsed?.folders)) {
+        state.folderState = {
+          lang: parsed.lang === "en" || parsed.lang === "es" ? parsed.lang : state.folderState.lang,
+          folders: parsed.folders.map((f, idx) => ({
+            id: typeof f?.id === "string" && f.id ? f.id : `f_imp_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+            name: typeof f?.name === "string" && f.name.trim() ? f.name.trim().slice(0, 40) : `Folder ${idx + 1}`,
+            color: /^#[0-9a-fA-F]{6}$/.test(f?.color) ? f.color : PRESET_COLORS[idx % PRESET_COLORS.length],
+            keywords: Array.isArray(f?.keywords) ? f.keywords.filter((k) => typeof k === "string").map((k) => k.trim().toLowerCase()).filter(Boolean) : []
+          })),
+          prompts: Array.isArray(parsed.prompts) ? parsed.prompts.filter((p) => p && typeof p.id === "string" && typeof p.title === "string" && typeof p.content === "string").map((p) => ({ id: p.id, title: p.title, content: p.content })) : state.folderState.prompts || [],
+          assignments: sanitizeMap(parsed.assignments, (v) => typeof v === "string" && v ? v : void 0),
+          protectedIds: sanitizeMap(parsed.protectedIds, (v) => v ? true : void 0),
+          minimized: !!parsed.minimized,
+          pos: state.folderState.pos || null,
+          // la posición del panel es local a esta pantalla
+          toolbarPos: state.folderState.toolbarPos || null,
+          view: {
+            filter: "ALL",
+            sort: state.sortMode,
+            toolbarCollapsed: state.toolbarCollapsed,
+            toolbarVertical: state.toolbarVertical
+          }
+        };
+        state.activeFolderFilter = "ALL";
+        autoClassifiedVisited.clear();
+        selectedMap.clear();
+        saveFolderData(state.folderState);
+        document.getElementById("gcm-toolbar")?.remove();
+        document.getElementById("gcm-folders-box")?.remove();
+        refreshUI();
+        updateStatusToast(t().toastBackupRestored, null, null, 3e3);
+        return true;
+      }
+    } catch (_) {
     }
-    return out;
+    updateStatusToast(t().toastBackupInvalid, null, null, 3e3);
+    return false;
   }
-  function importBackupConfig() {
+  function importBackupConfig(rawJsonString = null) {
+    if (typeof rawJsonString === "string" && rawJsonString.trim()) {
+      return applyImportedBackupJson(rawJsonString);
+    }
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json,application/json";
@@ -1445,47 +1711,12 @@
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        try {
-          const parsed = JSON.parse(String(reader.result));
-          if (Array.isArray(parsed.folders)) {
-            state.folderState = {
-              lang: parsed.lang === "en" || parsed.lang === "es" ? parsed.lang : state.folderState.lang,
-              folders: parsed.folders.map((f, idx) => ({
-                id: typeof f?.id === "string" && f.id ? f.id : `f_imp_${idx}`,
-                name: typeof f?.name === "string" && f.name.trim() ? f.name.trim().slice(0, 40) : `Folder ${idx + 1}`,
-                color: /^#[0-9a-fA-F]{6}$/.test(f?.color) ? f.color : PRESET_COLORS[idx % PRESET_COLORS.length],
-                keywords: Array.isArray(f?.keywords) ? f.keywords.filter((k) => typeof k === "string").map((k) => k.trim().toLowerCase()).filter(Boolean) : []
-              })),
-              prompts: Array.isArray(parsed.prompts) ? parsed.prompts.filter((p) => p && typeof p.id === "string" && typeof p.title === "string" && typeof p.content === "string").map((p) => ({ id: p.id, title: p.title, content: p.content })) : state.folderState.prompts || [],
-              assignments: sanitizeMap(parsed.assignments, (v) => typeof v === "string" ? v : void 0),
-              protectedIds: sanitizeMap(parsed.protectedIds, (v) => v ? true : void 0),
-              minimized: !!parsed.minimized,
-              pos: state.folderState.pos || null,
-              // la posición del panel es local a esta pantalla
-              toolbarPos: state.folderState.toolbarPos || null,
-              view: {
-                filter: "ALL",
-                sort: state.sortMode,
-                toolbarCollapsed: state.toolbarCollapsed,
-                toolbarVertical: state.toolbarVertical
-              }
-            };
-            state.activeFolderFilter = "ALL";
-            autoClassifiedVisited.clear();
-            selectedMap.clear();
-            saveFolderData(state.folderState);
-            document.getElementById("gcm-toolbar")?.remove();
-            document.getElementById("gcm-folders-box")?.remove();
-            refreshUI();
-            updateStatusToast(t().toastBackupRestored, null, null, 3e3);
-          }
-        } catch (_) {
-          updateStatusToast(t().toastBackupInvalid, null, null, 3e3);
-        }
+        applyImportedBackupJson(reader.result);
       };
       reader.readAsText(file);
     });
     input.click();
+    return true;
   }
 
   // src/prompts.js
@@ -1515,17 +1746,37 @@
       input.dispatchEvent(new Event("change", { bubbles: true }));
     } else {
       const currentText = (input.textContent || "").trim();
-      const nextText = currentText ? `${currentText}
+      const isRichEditor = input.classList?.contains("ProseMirror") || input.classList?.contains("ql-editor") || !!input.querySelector?.("p");
+      if (isRichEditor) {
+        const lines = (currentText ? `${currentText}
+${text}` : text).split(/\r?\n/);
+        input.textContent = "";
+        for (const line of lines) {
+          const p = document.createElement("p");
+          if (line) {
+            p.textContent = line;
+          } else {
+            p.appendChild(document.createElement("br"));
+          }
+          input.appendChild(p);
+        }
+      } else {
+        const nextText = currentText ? `${currentText}
 ${text}` : text;
-      input.textContent = nextText;
-      input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+        input.textContent = nextText;
+      }
+      const InputEvt = typeof InputEvent === "function" ? InputEvent : Event;
+      input.dispatchEvent(new InputEvt("input", { bubbles: true, inputType: "insertText", data: text }));
     }
     updateStatusToast(t().toastPromptInserted, null, null, 2500);
     return true;
   }
   function openPromptsModal() {
     const existing = document.getElementById("gcm-modal-overlay");
-    if (existing) existing.remove();
+    if (existing) {
+      existing._gcmClose?.(false);
+      existing.remove();
+    }
     if (!Array.isArray(state.folderState.prompts)) {
       state.folderState.prompts = t().defaultPrompts.map((p) => ({ ...p }));
     }
@@ -1533,6 +1784,13 @@ ${text}` : text;
     overlay.id = "gcm-modal-overlay";
     const card = document.createElement("div");
     card.className = "gcm-modal-card gcm-prompts-modal-card";
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    const closeModal = () => {
+      document.removeEventListener("keydown", onEsc);
+      overlay.remove();
+    };
+    overlay._gcmClose = closeModal;
     const title = document.createElement("div");
     title.className = "gcm-modal-title gcm-modal-title-icon";
     setButtonIconText(title, ICONS.zap, t().modalPromptsTitle);
@@ -1570,7 +1828,7 @@ ${text}` : text;
         useBtn.textContent = t().insertPromptBtn;
         useBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          overlay.remove();
+          closeModal();
           insertPromptIntoChat(p.content);
         });
         const delBtn = document.createElement("button");
@@ -1586,7 +1844,7 @@ ${text}` : text;
         itemActions.appendChild(useBtn);
         itemActions.appendChild(delBtn);
         item.addEventListener("click", () => {
-          overlay.remove();
+          closeModal();
           insertPromptIntoChat(p.content);
         });
         item.appendChild(info);
@@ -1616,7 +1874,7 @@ ${text}` : text;
         return;
       }
       state.folderState.prompts.push({
-        id: "p_" + Date.now().toString(36),
+        id: "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
         title: newTitle,
         content: newBody + "\n\n"
       });
@@ -1633,17 +1891,16 @@ ${text}` : text;
     const closeBtn = document.createElement("button");
     closeBtn.className = "gcm-btn gcm-btn-cancel";
     closeBtn.textContent = t().cancel;
-    closeBtn.addEventListener("click", () => overlay.remove());
+    closeBtn.addEventListener("click", closeModal);
     actions.appendChild(closeBtn);
     overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) overlay.remove();
+      if (e.target === overlay) closeModal();
     });
-    const onEsc = (e) => {
+    function onEsc(e) {
       if (e.key === "Escape") {
-        overlay.remove();
-        document.removeEventListener("keydown", onEsc);
+        closeModal();
       }
-    };
+    }
     document.addEventListener("keydown", onEsc);
     card.appendChild(title);
     card.appendChild(desc);
@@ -1687,18 +1944,14 @@ ${text}` : text;
     if (row.parentElement && row.parentElement !== document.body && countConvLinks(row.parentElement) <= 1) {
       scopes.push(row.parentElement);
     }
-    if (row.nextElementSibling && countConvLinks(row.nextElementSibling) === 0) {
-      scopes.push(row.nextElementSibling);
-    }
-    const allowArchiveBtn = isTask || PLATFORM_KEY === "chatgpt";
+    const allowArchiveBtn = Boolean(isTask);
     const prioritySelectors = PLATFORM_KEY === "chatgpt" ? [
       'button[data-testid^="history-item-"][data-testid$="-options"]',
       'button[data-testid*="options"]',
       'button[aria-haspopup="menu"]',
       "button[data-trailing-button]",
       'button[aria-label*="Options"], button[aria-label*="Opciones"], button[aria-label*="More"], button[aria-label*="Más"]',
-      'button[aria-label*="rchiv"], button[title*="rchiv"], button[data-testid*="archive"]',
-      "button:not(.gcm-checkbox)"
+      ...allowArchiveBtn ? ['button[aria-label*="rchiv"], button[title*="rchiv"], button[data-testid*="archive"]'] : []
     ] : [SELECTORS.optionsTrigger];
     for (const sel of prioritySelectors) {
       for (const scope of scopes) {
@@ -1820,16 +2073,6 @@ ${text}` : text;
       if (delRes.ok) return delRes;
     } catch (_) {
     }
-    try {
-      const archRes = await fetch(`/backend-api/conversation/${targetId}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers,
-        body: JSON.stringify({ is_archived: true })
-      });
-      if (archRes.ok) return archRes;
-    } catch (_) {
-    }
     return lastRes;
   }
   async function deleteOrArchiveRemoteTaskApi(targetId, token) {
@@ -1891,14 +2134,16 @@ ${text}` : text;
     }
     return null;
   }
-  var cachedRemoteCatalog = { ts: 0, entries: [] };
+  var cachedRemoteCatalog = { ts: 0, accountId: null, entries: [] };
   async function resolveChatGptIdByTitle(row, targetId, token) {
     if (!row) return null;
     const rawTitle = extractConvTitle(row, targetId) || "";
-    const normTitle = rawTitle.replace(/\.\.\.$/, "").trim().toLowerCase();
+    const isTruncatedDom = /\.\.\.$|…$/.test(rawTitle.trim());
+    const normTitle = rawTitle.replace(/(?:\.\.\.|…)$/, "").trim().toLowerCase();
     if (!normTitle) return null;
     const now = Date.now();
-    if (now - cachedRemoteCatalog.ts > 15e3 || cachedRemoteCatalog.entries.length === 0) {
+    const currentAccountId = getCookieValue("_account") || "personal";
+    if (now - cachedRemoteCatalog.ts > 15e3 || cachedRemoteCatalog.accountId !== currentAccountId || cachedRemoteCatalog.entries.length === 0) {
       const headers = buildChatGptHeaders(token, true);
       const endpoints = [
         { url: "/backend-api/wham/tasks", isTask: true },
@@ -1925,9 +2170,15 @@ ${text}` : text;
         } catch (_) {
         }
       }
-      cachedRemoteCatalog = { ts: now, entries };
+      cachedRemoteCatalog = { ts: now, accountId: currentAccountId, entries };
     }
-    const match = cachedRemoteCatalog.entries.find((e) => e.title === normTitle) || cachedRemoteCatalog.entries.find((e) => e.title.startsWith(normTitle) || normTitle.startsWith(e.title));
+    let match = cachedRemoteCatalog.entries.find((e) => e.isTask && e.title === normTitle) || cachedRemoteCatalog.entries.find((e) => e.title === normTitle);
+    if (!match && isTruncatedDom && normTitle.length >= 20) {
+      const prefixMatches = cachedRemoteCatalog.entries.filter((e) => e.isTask && e.title.startsWith(normTitle));
+      if (prefixMatches.length === 1) {
+        match = prefixMatches[0];
+      }
+    }
     if (match) {
       cachedRemoteCatalog.entries = cachedRemoteCatalog.entries.filter((e) => e.id !== match.id);
       return match;
@@ -2010,23 +2261,17 @@ ${text}` : text;
         2200
       );
       if (!menu) {
-        if (isTask || PLATFORM_KEY === "chatgpt") {
+        if (isTask) {
           await sleep(300);
-          if (!row.isConnected) {
-            cleanupEmptySidebarItems();
-            return true;
-          }
-          if (isTask) {
-            await removeDeletedRowFromDOM(row, targetId);
-            cleanupEmptySidebarItems();
-            return true;
-          }
+          await removeDeletedRowFromDOM(row, targetId);
+          cleanupEmptySidebarItems();
+          return true;
         }
         throw new Error("Menu did not open.");
       }
       await sleep(180);
       const menuItems = Array.from(menu.querySelectorAll(SELECTORS.deleteMenuItem));
-      const allowArchiveMenu = isTask || PLATFORM_KEY === "chatgpt";
+      const allowArchiveMenu = Boolean(isTask);
       let deleteBtn = menuItems.find((el2) => {
         const txt = (el2.textContent || "").toLowerCase();
         const testId = (el2.getAttribute("data-testid") || "").toLowerCase();
@@ -2066,7 +2311,9 @@ ${text}` : text;
           const txt = (b.textContent || "").trim().toLowerCase();
           return txt === "eliminar" || txt === "delete" || txt === "borrar" || isTask && (txt.includes("archivar") || txt.includes("archive") || txt.includes("detener") || txt.includes("stop"));
         });
-        if (!confirmBtn && dialogBtns.length === 2) confirmBtn = dialogBtns[1];
+        if (!confirmBtn && dialogBtns.length === 2 && !dialog.querySelector("input, textarea")) {
+          confirmBtn = dialogBtns[1];
+        }
       }
       if (!confirmBtn) {
         throw new Error("Confirm button not found.");
@@ -2110,6 +2357,8 @@ ${text}` : text;
     const total = queueIds.length;
     let deletedCount = 0;
     let errorCount = 0;
+    let stateModified = false;
+    const actuallyDeletedIds = [];
     try {
       for (let i = 0; i < queueIds.length; i++) {
         if (state.deletionStopRequested) break;
@@ -2119,22 +2368,26 @@ ${text}` : text;
           const ok = await deleteSingleConversation(id);
           if (ok) {
             deletedCount++;
+            actuallyDeletedIds.push(id);
             selectedMap.delete(id);
             if (state.folderState.assignments[id]) {
               delete state.folderState.assignments[id];
-              saveFolderData(state.folderState);
+              stateModified = true;
             }
           } else {
             errorCount++;
           }
         } catch (err) {
-          console.warn("[ChatFold] Error deleting conversation:", err);
+          console.warn("[Foldy] Error deleting conversation:", err);
           errorCount++;
           document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
           await sleep(400);
         }
       }
     } finally {
+      if (stateModified) {
+        saveFolderData(state.folderState);
+      }
       document.body.classList.remove("gcm-stealth-delete");
       state.deletionInProgress = false;
       state.deletionStopRequested = false;
@@ -2143,7 +2396,7 @@ ${text}` : text;
     if (selectAllCb) selectAllCb.checked = false;
     cleanupEmptySidebarItems();
     refreshUI();
-    checkRedirectIfActiveChatDeleted(queueIds.slice(0, deletedCount));
+    checkRedirectIfActiveChatDeleted(actuallyDeletedIds);
     const summary = errorCount > 0 ? t().toastDeleteFinishedErr(deletedCount, errorCount) : t().toastDeleteSuccess(deletedCount);
     updateStatusToast(summary, total, total, 4500);
   }
@@ -2164,13 +2417,18 @@ ${text}` : text;
 `;
     const allMessages = Array.from(document.querySelectorAll(SELECTORS.activeMessages));
     const messages = allMessages.filter((m) => !allMessages.some((o) => o !== m && o.contains(m)));
+    if (selectedIds.length === 0 && messages.length === 0) {
+      updateStatusToast(t().toastMdEmpty || t().toastMdExported, null, null, 2800);
+      return false;
+    }
     if (selectedIds.length > 0) {
       markdown += `## ${t().mdSelectedIndex(selectedIds.length)}
 
 `;
       selectedIds.forEach((id, idx) => {
         const rowObj = items.find((it) => it.id === id);
-        const title = (rowObj?.title || id).replace(/[[\]\r\n]/g, " ").trim();
+        const fallbackTitle = selectedMap.get(id)?.title || id;
+        const title = (rowObj?.title || fallbackTitle).replace(/[[\]\r\n]/g, " ").trim();
         const folderName = folderLookup.get(state.folderState.assignments[id]) || t().pillUnassigned;
         const isLocked = state.folderState.protectedIds[id] ? " 🔒" : "";
         markdown += `${idx + 1}. **[${title}](${P.buildUrl(id)})** — *${t().mdFolderLabel}: ${folderName}*${isLocked}
@@ -2256,11 +2514,18 @@ ${text}
     const rect = anchorBtn.getBoundingClientRect();
     const popover = document.createElement("div");
     popover.id = "gcm-folder-popover";
+    popover.setAttribute("role", "menu");
     popover.style.top = `${rect.bottom + 8}px`;
     popover.style.left = `${Math.max(12, rect.left - 30)}px`;
+    const closePopover = () => {
+      popover.remove();
+      document.removeEventListener("mousedown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEsc);
+    };
     state.folderState.folders.forEach((f) => {
       const item = document.createElement("button");
       item.className = "gcm-popover-item";
+      item.setAttribute("role", "menuitem");
       const dot = document.createElement("span");
       dot.className = "gcm-folder-dot";
       dot.style.backgroundColor = f.color;
@@ -2271,7 +2536,7 @@ ${text}
       item.appendChild(txt);
       item.addEventListener("click", () => {
         assignSelectedToFolder(f.id);
-        popover.remove();
+        closePopover();
       });
       popover.appendChild(item);
     });
@@ -2280,18 +2545,19 @@ ${text}
     popover.appendChild(divider);
     const removeBtn = document.createElement("button");
     removeBtn.className = "gcm-popover-item";
+    removeBtn.setAttribute("role", "menuitem");
     setButtonIconText(removeBtn, ICONS.folderMinus, t().removeFromFolder);
     removeBtn.addEventListener("click", () => {
       assignSelectedToFolder(null);
-      popover.remove();
+      closePopover();
     });
     popover.appendChild(removeBtn);
     const createNewBtn = document.createElement("button");
-    createNewBtn.className = "gcm-popover-item";
-    createNewBtn.style.color = "#a8c7fa";
+    createNewBtn.className = "gcm-popover-item gcm-popover-item-accent";
+    createNewBtn.setAttribute("role", "menuitem");
     setButtonIconText(createNewBtn, ICONS.folderPlus, t().createNewFolderMenu);
     createNewBtn.addEventListener("click", () => {
-      popover.remove();
+      closePopover();
       openCreateFolderModal((newFolder) => {
         assignSelectedToFolder(newFolder.id);
       });
@@ -2305,10 +2571,15 @@ ${text}
     popover.style.top = `${preferTop}px`;
     const closeOnOutside = (e) => {
       if (!popover.contains(e.target) && e.target !== anchorBtn) {
-        popover.remove();
-        document.removeEventListener("mousedown", closeOnOutside);
+        closePopover();
       }
     };
+    const closeOnEsc = (e) => {
+      if (e.key === "Escape") {
+        closePopover();
+      }
+    };
+    document.addEventListener("keydown", closeOnEsc);
     setTimeout(() => document.addEventListener("mousedown", closeOnOutside), 20);
   }
   function assignSelectedToFolder(folderId) {
@@ -2332,6 +2603,8 @@ ${text}
     );
   }
   function setupDelegatedSidebarListener() {
+    if (state.delegatedListenerAttached) return;
+    state.delegatedListenerAttached = true;
     const stopPressOnControls = (e) => {
       const target = e.target;
       if (!(target instanceof Element)) return;
@@ -2362,6 +2635,7 @@ ${text}
             delete state.folderState.protectedIds[id];
             saveFolderData(state.folderState);
             refreshUI();
+            updateStatusToast(t().toastUnprotected(1), null, null, 2500);
           }
           return;
         }
@@ -2378,11 +2652,11 @@ ${text}
             state.autoSelectAllMode = false;
             if (state.autoScrollActive) state.autoScrollActive = false;
           }
-          const applyCbState = (cb, r, cbId, state2) => {
-            cb.checked = state2;
-            cb.classList.toggle("gcm-checked", state2);
-            if (state2) {
-              selectedMap.set(cbId, { id: cbId });
+          const applyCbState = (cb, r, cbId, isChecked) => {
+            cb.checked = isChecked;
+            cb.classList.toggle("gcm-checked", isChecked);
+            if (isChecked) {
+              selectedMap.set(cbId, { id: cbId, title: r.textContent?.trim() || cbId });
               r.classList.add("gcm-selected");
             } else {
               selectedMap.delete(cbId);
@@ -2396,9 +2670,10 @@ ${text}
             const r = cb.closest(".gcm-chat-row") || cb.parentElement;
             return r && !r.classList.contains("gcm-hidden-by-filter");
           });
-          if (e.shiftKey && state.lastCheckedCheckbox && state.lastCheckedCheckbox !== checkbox) {
-            const start = visibleCheckboxes.indexOf(state.lastCheckedCheckbox);
-            const end = visibleCheckboxes.indexOf(checkbox);
+          const anchorId = state.lastCheckedConvId || state.lastCheckedCheckbox?.dataset?.convId;
+          if (e.shiftKey && anchorId && anchorId !== id) {
+            const start = visibleCheckboxes.findIndex((cb) => cb.dataset.convId === anchorId);
+            const end = visibleCheckboxes.findIndex((cb) => cb === checkbox || cb.dataset.convId === id);
             if (start !== -1 && end !== -1) {
               const [low, high] = [Math.min(start, end), Math.max(start, end)];
               for (let i = low; i <= high; i++) {
@@ -2428,6 +2703,7 @@ ${text}
           if (typeof queueMicrotask === "function") queueMicrotask(syncNativeChecked);
           setTimeout(syncNativeChecked, 0);
           state.lastCheckedCheckbox = checkbox;
+          state.lastCheckedConvId = id;
           updateToolbarState();
         }
       },
@@ -2436,12 +2712,12 @@ ${text}
   }
   function injectCheckboxes(items) {
     for (let i = 0; i < items.length; i++) {
-      const { id, row } = items[i];
+      const { id, row, title } = items[i];
       if (!row.classList.contains("gcm-chat-row")) {
         row.classList.add("gcm-chat-row");
       }
       if (state.autoSelectAllMode && !row.classList.contains("gcm-hidden-by-filter") && !selectedMap.has(id)) {
-        selectedMap.set(id, { id });
+        selectedMap.set(id, { id, title: title || row.textContent?.trim() || id });
       }
       const isSelected = selectedMap.has(id);
       const existingCb = row.querySelector(".gcm-checkbox");
@@ -2463,11 +2739,20 @@ ${text}
     }
   }
   function toggleSelectAll(checked) {
-    state.autoSelectAllMode = !!checked;
+    if (!checked) {
+      clearAllSelections();
+      updateToolbarState();
+      if (state.autoScrollActive) {
+        state.autoScrollActive = false;
+        refreshUI();
+      }
+      return;
+    }
+    state.autoSelectAllMode = true;
     const selectAllCb = document.getElementById("gcm-select-all");
     if (selectAllCb) {
-      selectAllCb.checked = checked;
-      selectAllCb.classList.toggle("gcm-checked", checked);
+      selectAllCb.checked = true;
+      selectAllCb.classList.add("gcm-checked");
     }
     const sidebar = getSidebarElement() || document;
     const checkboxes = Array.from(sidebar.querySelectorAll(".gcm-checkbox:not(#gcm-select-all)")).filter((cb) => {
@@ -2475,28 +2760,18 @@ ${text}
       return r && !r.classList.contains("gcm-hidden-by-filter");
     });
     checkboxes.forEach((cb) => {
-      cb.checked = checked;
-      cb.classList.toggle("gcm-checked", checked);
+      cb.checked = true;
+      cb.classList.add("gcm-checked");
       const id = cb.dataset.convId;
       const row = cb.closest(".gcm-chat-row") || cb.parentElement;
       if (id && row) {
-        if (checked) {
-          selectedMap.set(id, { id });
-          row.classList.add("gcm-selected");
-        } else {
-          selectedMap.delete(id);
-          row.classList.remove("gcm-selected");
-        }
+        selectedMap.set(id, { id, title: row.textContent?.trim() || id });
+        row.classList.add("gcm-selected");
       }
     });
     updateToolbarState();
-    if (checked) {
-      if (!state.autoScrollActive) {
-        toggleAutoScrollHistory({ silent: true });
-      }
-    } else if (state.autoScrollActive) {
-      state.autoScrollActive = false;
-      refreshUI();
+    if (!state.autoScrollActive) {
+      toggleAutoScrollHistory({ silent: true });
     }
   }
 
@@ -2595,11 +2870,17 @@ ${text}
     toolbar.classList.toggle("gcm-vertical", !!state.toolbarVertical && !state.toolbarCollapsed);
     collapseBtn.textContent = "";
     collapseBtn.appendChild(createIconElement(state.toolbarCollapsed ? ICONS.menu : ICONS.chevronRight));
-    collapseBtn.title = state.toolbarCollapsed ? t().toolbarExpandTitle : t().toolbarCollapseTitle;
+    const collapseTitle = state.toolbarCollapsed ? t().toolbarExpandTitle : t().toolbarCollapseTitle;
+    collapseBtn.title = collapseTitle;
+    collapseBtn.setAttribute("aria-label", collapseTitle);
+    collapseBtn.setAttribute("aria-expanded", String(!state.toolbarCollapsed));
     if (orientBtn) {
       orientBtn.textContent = "";
       orientBtn.appendChild(createIconElement(state.toolbarVertical ? ICONS.layoutHorizontal : ICONS.layoutVertical));
-      orientBtn.title = state.toolbarVertical ? t().toolbarHorizontalTitle : t().toolbarVerticalTitle;
+      const orientTitle = state.toolbarVertical ? t().toolbarHorizontalTitle : t().toolbarVerticalTitle;
+      orientBtn.title = orientTitle;
+      orientBtn.setAttribute("aria-label", orientTitle);
+      orientBtn.setAttribute("aria-expanded", String(!state.toolbarCollapsed));
     }
     clampToolbarPosition(toolbar);
   }
@@ -2979,12 +3260,13 @@ ${text}
     document.addEventListener("keydown", (e) => {
       if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey) return;
       const key = (e.key || "").toUpperCase();
-      if (key === "F") {
+      const code = e.code || "";
+      if (key === "F" || code === "KeyF") {
         e.preventDefault();
         state.folderState.minimized = !state.folderState.minimized;
         saveFolderData(state.folderState);
         refreshUI();
-      } else if (key === "S") {
+      } else if (key === "S" || code === "KeyS") {
         e.preventDefault();
         if (state.folderState.minimized) {
           state.folderState.minimized = false;
@@ -3012,7 +3294,7 @@ ${text}
             exportBackupConfig();
             sendResponse?.({ ok: true });
           } else if (msg.action === "IMPORT_BACKUP") {
-            importBackupConfig();
+            importBackupConfig(msg.rawJson);
             sendResponse?.({ ok: true });
           } else if (msg.action === "SET_LANG" || msg.action === "TOGGLE_LANG") {
             setAppLanguage(msg.lang);
@@ -3037,7 +3319,7 @@ ${text}
     title.style.display = "inline-flex";
     title.style.alignItems = "center";
     title.style.gap = "7px";
-    title.appendChild(createIconElement(ICONS.chatfoldLogo));
+    title.appendChild(createIconElement(ICONS.foldyLogo));
     const titleText = document.createElement("span");
     titleText.textContent = t().panelTitle;
     title.appendChild(titleText);
@@ -3151,6 +3433,9 @@ ${text}
   function createFolderPill({ id, name, color, count, deletable, keywords }) {
     const pill = document.createElement("div");
     pill.className = "gcm-folder-pill" + (state.activeFolderFilter === id ? " active" : "");
+    pill.setAttribute("role", "button");
+    pill.setAttribute("tabindex", "0");
+    pill.setAttribute("aria-pressed", String(state.activeFolderFilter === id));
     if (Array.isArray(keywords) && keywords.length > 0) {
       pill.title = `${t().autoRulesPrefix}: ${keywords.join(", ")}`;
     }
@@ -3175,18 +3460,33 @@ ${text}
       del.className = "gcm-folder-del";
       del.textContent = "×";
       del.title = t().delFolderTitle(name);
+      del.setAttribute("role", "button");
+      del.setAttribute("tabindex", "0");
+      del.setAttribute("aria-label", t().delFolderTitle(name));
       del.addEventListener("click", (e) => {
         e.stopPropagation();
         deleteFolderById(id);
       });
+      del.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteFolderById(id);
+        }
+      });
       pill.appendChild(del);
     }
     pill.addEventListener("click", () => {
-      state.userClickedFilterInSession = id !== "ALL";
       state.autoSelectAllMode = false;
       state.activeFolderFilter = id;
       saveView();
       refreshUI();
+    });
+    pill.addEventListener("keydown", (e) => {
+      if (e.target === pill && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault();
+        pill.click();
+      }
     });
     return pill;
   }
@@ -3205,6 +3505,7 @@ ${text}
     if (state.isRefreshing || document.hidden) return;
     state.isRefreshing = true;
     try {
+      syncHostTheme();
       createToolbar();
       const items = getConversationRows();
       runAutoClassification(items);
@@ -3221,21 +3522,50 @@ ${text}
       setTimeout(init, 300);
       return;
     }
+    syncHostTheme();
     registerGlobalListeners();
     setupDelegatedSidebarListener();
     setTimeout(refreshUI, 800);
-    const observer = new MutationObserver((mutations) => {
-      if (document.hidden) return;
-      const isOwnNode = (n) => {
-        const el2 = n.nodeType === 1 ? n : n.parentElement;
-        return !!el2 && !!el2.closest('[id^="gcm-"], [class*="gcm-"]');
-      };
-      const hasRelevantChange = mutations.some((m) => {
-        if (m.addedNodes.length === 0 && m.removedNodes.length === 0) return false;
-        return !Array.from(m.addedNodes).every(isOwnNode) || !Array.from(m.removedNodes).every(isOwnNode);
+    const themeObserver = new MutationObserver(() => {
+      syncHostTheme();
+    });
+    if (document.documentElement) {
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class", "data-theme", "data-color-scheme", "data-mode", "style"]
       });
-      if (hasRelevantChange) {
-        scheduleRefresh(150);
+    }
+    themeObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme", "data-color-scheme", "data-mode", "style"]
+    });
+    const isOwnNode = (n) => {
+      const el2 = n.nodeType === 1 ? n : n.parentElement;
+      return !!el2 && !!el2.closest('[id^="gcm-"], [class*="gcm-"]');
+    };
+    const hasNonOwnNode = (list) => {
+      for (let i = 0; i < list.length; i++) {
+        if (!isOwnNode(list[i])) return true;
+      }
+      return false;
+    };
+    const isInsideStreamingMain = (targetNode) => {
+      const el2 = targetNode?.nodeType === 1 ? targetNode : targetNode?.parentElement;
+      if (!el2) return false;
+      const mainEl = el2.closest('main, [role="main"]');
+      if (!mainEl) return false;
+      const sidebar = getSidebarElement();
+      return !sidebar || !mainEl.contains(sidebar);
+    };
+    const observer = new MutationObserver((mutations) => {
+      if (document.hidden || state.isRefreshing) return;
+      for (let i = 0; i < mutations.length; i++) {
+        const m = mutations[i];
+        if (isOwnNode(m.target) || isInsideStreamingMain(m.target)) continue;
+        if (hasNonOwnNode(m.addedNodes) || hasNonOwnNode(m.removedNodes)) {
+          scheduleRefresh(150);
+          return;
+        }
       }
     });
     let observedTarget = null;
@@ -3259,14 +3589,12 @@ ${text}
       }, 200);
     }
     setInterval(() => {
-      if (!document.hidden) {
-        if (observedTarget) {
-          const sidebar = getSidebarElement();
-          if (!observedTarget.isConnected || sidebar && sidebar !== observedTarget) {
-            startObserving();
-          }
+      if (!document.hidden && observedTarget) {
+        const sidebar = getSidebarElement();
+        if (!observedTarget.isConnected || sidebar && sidebar !== observedTarget) {
+          startObserving();
+          scheduleRefresh(0);
         }
-        scheduleRefresh(0);
       }
     }, 4e3);
   }

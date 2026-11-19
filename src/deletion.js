@@ -56,10 +56,7 @@ function findOptionsTrigger(row, link, isTask = false) {
   if (row.parentElement && row.parentElement !== document.body && countConvLinks(row.parentElement) <= 1) {
     scopes.push(row.parentElement);
   }
-  if (row.nextElementSibling && countConvLinks(row.nextElementSibling) === 0) {
-    scopes.push(row.nextElementSibling);
-  }
-  const allowArchiveBtn = isTask || PLATFORM_KEY === 'chatgpt';
+  const allowArchiveBtn = Boolean(isTask);
   const prioritySelectors =
     PLATFORM_KEY === 'chatgpt'
       ? [
@@ -68,8 +65,7 @@ function findOptionsTrigger(row, link, isTask = false) {
           'button[aria-haspopup="menu"]',
           'button[data-trailing-button]',
           'button[aria-label*="Options"], button[aria-label*="Opciones"], button[aria-label*="More"], button[aria-label*="Más"]',
-          'button[aria-label*="rchiv"], button[title*="rchiv"], button[data-testid*="archive"]',
-          'button:not(.gcm-checkbox)'
+          ...(allowArchiveBtn ? ['button[aria-label*="rchiv"], button[title*="rchiv"], button[data-testid*="archive"]'] : [])
         ]
       : [SELECTORS.optionsTrigger];
 
@@ -208,7 +204,7 @@ async function hideChatGptConversation(targetId, token) {
     lastRes = personalRes;
   }
 
-  // 2) Fallback: DELETE directo o archivar por si es un hilo especial (Gizmo / Proyecto)
+  // 2) Fallback: DELETE directo por si es un hilo especial (Gizmo / Proyecto)
   try {
     const delRes = await fetch(`/backend-api/conversation/${targetId}`, {
       method: 'DELETE',
@@ -216,16 +212,6 @@ async function hideChatGptConversation(targetId, token) {
       headers
     });
     if (delRes.ok) return delRes;
-  } catch (_) {}
-
-  try {
-    const archRes = await fetch(`/backend-api/conversation/${targetId}`, {
-      method: 'PATCH',
-      credentials: 'include',
-      headers,
-      body: JSON.stringify({ is_archived: true })
-    });
-    if (archRes.ok) return archRes;
   } catch (_) {}
 
   return lastRes;
@@ -296,16 +282,22 @@ function getAlternateChatGptId(id) {
   return null;
 }
 
-let cachedRemoteCatalog = { ts: 0, entries: [] };
+let cachedRemoteCatalog = { ts: 0, accountId: null, entries: [] };
 
-async function resolveChatGptIdByTitle(row, targetId, token) {
+export async function resolveChatGptIdByTitle(row, targetId, token) {
   if (!row) return null;
   const rawTitle = extractConvTitle(row, targetId) || '';
-  const normTitle = rawTitle.replace(/\.\.\.$/, '').trim().toLowerCase();
+  const isTruncatedDom = /\.\.\.$|…$/.test(rawTitle.trim());
+  const normTitle = rawTitle.replace(/(?:\.\.\.|…)$/, '').trim().toLowerCase();
   if (!normTitle) return null;
 
   const now = Date.now();
-  if (now - cachedRemoteCatalog.ts > 15000 || cachedRemoteCatalog.entries.length === 0) {
+  const currentAccountId = getCookieValue('_account') || 'personal';
+  if (
+    now - cachedRemoteCatalog.ts > 15000 ||
+    cachedRemoteCatalog.accountId !== currentAccountId ||
+    cachedRemoteCatalog.entries.length === 0
+  ) {
     const headers = buildChatGptHeaders(token, true);
     const endpoints = [
       { url: '/backend-api/wham/tasks', isTask: true },
@@ -332,12 +324,20 @@ async function resolveChatGptIdByTitle(row, targetId, token) {
         }
       } catch (_) {}
     }
-    cachedRemoteCatalog = { ts: now, entries };
+    cachedRemoteCatalog = { ts: now, accountId: currentAccountId, entries };
   }
 
-  const match =
-    cachedRemoteCatalog.entries.find((e) => e.title === normTitle) ||
-    cachedRemoteCatalog.entries.find((e) => e.title.startsWith(normTitle) || normTitle.startsWith(e.title));
+  let match =
+    cachedRemoteCatalog.entries.find((e) => e.isTask && e.title === normTitle) ||
+    cachedRemoteCatalog.entries.find((e) => e.title === normTitle);
+
+  if (!match && isTruncatedDom && normTitle.length >= 20) {
+    const prefixMatches = cachedRemoteCatalog.entries.filter((e) => e.isTask && e.title.startsWith(normTitle));
+    if (prefixMatches.length === 1) {
+      match = prefixMatches[0];
+    }
+  }
+
   if (match) {
     // Eliminarlo del catálogo en caché por si hay otra tarea con título similar
     cachedRemoteCatalog.entries = cachedRemoteCatalog.entries.filter((e) => e.id !== match.id);
@@ -450,17 +450,11 @@ async function deleteSingleConversation(targetId) {
     );
     if (!menu) {
       // Si el botón era un botón directo de Archivar (sin submenú) en una tarea remota:
-      if (isTask || PLATFORM_KEY === 'chatgpt') {
+      if (isTask) {
         await sleep(300);
-        if (!row.isConnected) {
-          cleanupEmptySidebarItems();
-          return true;
-        }
-        if (isTask) {
-          await removeDeletedRowFromDOM(row, targetId);
-          cleanupEmptySidebarItems();
-          return true;
-        }
+        await removeDeletedRowFromDOM(row, targetId);
+        cleanupEmptySidebarItems();
+        return true;
       }
       throw new Error('Menu did not open.');
     }
@@ -468,7 +462,7 @@ async function deleteSingleConversation(targetId) {
     await sleep(180);
 
     const menuItems = Array.from(menu.querySelectorAll(SELECTORS.deleteMenuItem));
-    const allowArchiveMenu = isTask || PLATFORM_KEY === 'chatgpt';
+    const allowArchiveMenu = Boolean(isTask);
     let deleteBtn = menuItems.find((el) => {
       const txt = (el.textContent || '').toLowerCase();
       const testId = (el.getAttribute('data-testid') || '').toLowerCase();
@@ -531,9 +525,11 @@ async function deleteSingleConversation(targetId) {
           (isTask && (txt.includes('archivar') || txt.includes('archive') || txt.includes('detener') || txt.includes('stop')))
         );
       });
-      // Último recurso: solo si el diálogo tiene exactamente dos botones (cancelar + confirmar).
-      // Con más botones no se adivina: podría pulsarse una acción distinta a borrar.
-      if (!confirmBtn && dialogBtns.length === 2) confirmBtn = dialogBtns[1];
+      // Último recurso: solo si el diálogo tiene exactamente dos botones (cancelar + confirmar) y ningún input/textarea.
+      // Con más botones o campos de texto no se adivina: podría pulsarse una acción distinta a borrar (p. ej. renombrar/compartir).
+      if (!confirmBtn && dialogBtns.length === 2 && !dialog.querySelector('input, textarea')) {
+        confirmBtn = dialogBtns[1];
+      }
     }
 
     if (!confirmBtn) {
@@ -585,6 +581,8 @@ export async function deleteSelectedChats() {
   const total = queueIds.length;
   let deletedCount = 0;
   let errorCount = 0;
+  let stateModified = false;
+  const actuallyDeletedIds = [];
 
   try {
     for (let i = 0; i < queueIds.length; i++) {
@@ -597,23 +595,27 @@ export async function deleteSelectedChats() {
         const ok = await deleteSingleConversation(id);
         if (ok) {
           deletedCount++;
+          actuallyDeletedIds.push(id);
           selectedMap.delete(id);
           if (state.folderState.assignments[id]) {
             delete state.folderState.assignments[id];
-            saveFolderData(state.folderState);
+            stateModified = true;
           }
         } else {
           // La conversación no está cargada en la barra lateral: contarla como error, no ignorarla.
           errorCount++;
         }
       } catch (err) {
-        console.warn('[ChatFold] Error deleting conversation:', err);
+        console.warn('[Foldy] Error deleting conversation:', err);
         errorCount++;
         document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         await sleep(400);
       }
     }
   } finally {
+    if (stateModified) {
+      saveFolderData(state.folderState);
+    }
     document.body.classList.remove('gcm-stealth-delete');
     state.deletionInProgress = false;
     state.deletionStopRequested = false;
@@ -624,7 +626,7 @@ export async function deleteSelectedChats() {
 
   cleanupEmptySidebarItems();
   refreshUI();
-  checkRedirectIfActiveChatDeleted(queueIds.slice(0, deletedCount));
+  checkRedirectIfActiveChatDeleted(actuallyDeletedIds);
 
   const summary =
     errorCount > 0 ? t().toastDeleteFinishedErr(deletedCount, errorCount) : t().toastDeleteSuccess(deletedCount);

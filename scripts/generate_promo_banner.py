@@ -34,7 +34,7 @@ base = Image.alpha_composite(base, glow)
 draw = ImageDraw.Draw(base)
 
 # Load Logo
-logo_path = r'C:\Users\Admin Lab\Proyectos\ChatFold\assets\chatfold-icon-transparent-uhd.png'
+logo_path = r'C:\Users\Admin Lab\Proyectos\Foldy\assets\chatfold-icon-transparent-uhd.png'
 if os.path.exists(logo_path):
     logo_img = Image.open(logo_path).convert('RGBA')
     logo_img = logo_img.resize((56, 56), Image.Resampling.LANCZOS)
@@ -315,7 +315,7 @@ for c_title, c_desc, c_col in cards:
 draw.text((rx + 22, 742), 'Disponible en Microsoft Edge Add-ons & Chrome Web Store', font=font_badge, fill=(138, 180, 248, 200))
 
 # Save output
-out_dir = r'C:\Users\Admin Lab\Proyectos\ChatFold\assets'
+out_dir = r'C:\Users\Admin Lab\Proyectos\Foldy\assets'
 out_desktop = r'C:\Users\Admin Lab\Desktop'
 file_name = 'chatfold-edge-store-promo-1280x800.png'
 file_name_foldy = 'foldy-edge-store-promo-1280x800.png'

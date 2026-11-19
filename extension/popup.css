@@ -278,3 +278,127 @@ kbd {
   font-size: 10px;
   color: #bdc1c6;
 }
+
+.cf-btn:focus-visible,
+.cf-lang-btn:focus-visible,
+.cf-platform-card:focus-visible {
+  outline: 2px solid #8ab4f8;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background: radial-gradient(circle at top right, #f3f6fc 0%, #e8ecf5 100%);
+    color: #1f2937;
+  }
+
+  .cf-header {
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .cf-title {
+    color: #111827;
+  }
+
+  .cf-title-fold {
+    color: #1a73e8;
+  }
+
+  .cf-subtitle {
+    color: #137333;
+  }
+
+  .cf-lang-btn {
+    color: #1f2937;
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.14);
+  }
+
+  .cf-lang-btn:hover {
+    background: rgba(26, 115, 232, 0.12);
+    border-color: rgba(26, 115, 232, 0.35);
+    color: #174ea6;
+  }
+
+  .cf-version {
+    color: #174ea6;
+    background: rgba(26, 115, 232, 0.1);
+    border-color: rgba(26, 115, 232, 0.25);
+  }
+
+  .cf-section-title {
+    color: #4b5563;
+  }
+
+  .cf-platform-card {
+    background: rgba(255, 255, 255, 0.75);
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .cf-platform-card:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(26, 115, 232, 0.35);
+  }
+
+  .cf-platform-card.cf-active-platform {
+    background: linear-gradient(135deg, rgba(26, 115, 232, 0.14), rgba(66, 133, 244, 0.06));
+    border-color: rgba(26, 115, 232, 0.45);
+    box-shadow: 0 2px 10px rgba(26, 115, 232, 0.12);
+  }
+
+  .cf-platform-name {
+    color: #111827;
+  }
+
+  .cf-live-badge {
+    color: #137333;
+    background: rgba(19, 115, 51, 0.12);
+    border-color: rgba(19, 115, 51, 0.3);
+  }
+
+  .cf-platform-stats {
+    color: #4b5563;
+  }
+
+  .cf-btn:not(.cf-btn-primary) {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1f2937;
+  }
+
+  .cf-btn:not(.cf-btn-primary):hover:not(:disabled) {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.22);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .cf-inactive-hint {
+    color: #4b5563;
+  }
+
+  .cf-footer {
+    border-top-color: rgba(0, 0, 0, 0.08);
+    color: #4b5563;
+  }
+
+  kbd {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.15);
+    color: #374151;
+  }
+
+  .cf-btn:focus-visible,
+  .cf-lang-btn:focus-visible,
+  .cf-platform-card:focus-visible {
+    outline-color: #1a73e8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-lang-btn,
+  .cf-platform-card,
+  .cf-btn,
+  .cf-btn svg {
+    transition: none !important;
+  }
+}

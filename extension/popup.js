@@ -134,7 +134,7 @@ function renderPlatforms(syncData = {}, activePlatformKey = null) {
 
   PLATFORM_LIST.forEach((p) => {
     const data = syncData[p.storageKey] || {};
-    const foldersCount = Array.isArray(data.folders) ? data.folders.length : 3;
+    const foldersCount = Array.isArray(data.folders) ? data.folders.length : 0;
     const assignedCount = data.assignments && typeof data.assignments === 'object' ? Object.keys(data.assignments).length : 0;
     const lockedCount = data.protectedIds && typeof data.protectedIds === 'object' ? Object.keys(data.protectedIds).length : 0;
 
@@ -197,18 +197,21 @@ function togglePopupLanguage() {
   applyPopupTranslations();
   renderPlatforms(cachedSyncData, cachedActiveKey);
 
-  // Actualizar el idioma en el almacenamiento sincronizado de la plataforma activa (o en las existentes)
+  // Actualizar el idioma en el almacenamiento sincronizado solo si ya existe un estado válido con carpetas
   if (typeof chrome !== 'undefined' && chrome.storage?.sync?.set) {
     const targetPlatform = PLATFORM_LIST.find((p) => p.key === cachedActiveKey);
     if (targetPlatform) {
-      const existing = cachedSyncData[targetPlatform.storageKey] || {};
-      cachedSyncData[targetPlatform.storageKey] = { ...existing, lang: currentPopupLang };
-      chrome.storage.sync.set({ [targetPlatform.storageKey]: cachedSyncData[targetPlatform.storageKey] });
+      const existing = cachedSyncData[targetPlatform.storageKey];
+      if (existing && typeof existing === 'object' && Array.isArray(existing.folders)) {
+        cachedSyncData[targetPlatform.storageKey] = { ...existing, lang: currentPopupLang };
+        chrome.storage.sync.set({ [targetPlatform.storageKey]: cachedSyncData[targetPlatform.storageKey] });
+      }
     } else {
       const patch = {};
       PLATFORM_LIST.forEach((p) => {
-        if (cachedSyncData[p.storageKey] && typeof cachedSyncData[p.storageKey] === 'object') {
-          cachedSyncData[p.storageKey] = { ...cachedSyncData[p.storageKey], lang: currentPopupLang };
+        const existing = cachedSyncData[p.storageKey];
+        if (existing && typeof existing === 'object' && Array.isArray(existing.folders)) {
+          cachedSyncData[p.storageKey] = { ...existing, lang: currentPopupLang };
           patch[p.storageKey] = cachedSyncData[p.storageKey];
         }
       });
@@ -221,7 +224,26 @@ function togglePopupLanguage() {
   sendToActiveTab('SET_LANG', { lang: currentPopupLang }, false);
 }
 
+function triggerPopupBackupImport() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      sendToActiveTab('IMPORT_BACKUP', { rawJson: String(reader.result) }, true);
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  applyPopupTranslations();
+  renderPlatforms({}, null);
+
   const verEl = document.getElementById('cf-version');
   if (verEl && typeof chrome !== 'undefined' && chrome.runtime?.getManifest) {
     verEl.textContent = `v${chrome.runtime.getManifest().version}`;
@@ -287,5 +309,5 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('cf-btn-toggle')?.addEventListener('click', () => sendToActiveTab('TOGGLE_PANEL'));
   document.getElementById('cf-btn-prompts')?.addEventListener('click', () => sendToActiveTab('OPEN_PROMPTS'));
   document.getElementById('cf-btn-backup')?.addEventListener('click', () => sendToActiveTab('EXPORT_BACKUP'));
-  document.getElementById('cf-btn-import')?.addEventListener('click', () => sendToActiveTab('IMPORT_BACKUP'));
+  document.getElementById('cf-btn-import')?.addEventListener('click', triggerPopupBackupImport);
 });

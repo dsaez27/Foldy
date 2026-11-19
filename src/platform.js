@@ -53,7 +53,8 @@ export const PLATFORMS = {
     name: 'ChatGPT',
     storageKey: 'gcm_chatgpt_folders_data_v1',
     legacyStorageKey: null,
-    convHrefRegex: /\/(?:c|codex\/tasks|codex\/cloud|codex|tasks)\/([0-9a-zA-Z_-]{5,})/,
+    convHrefRegex:
+      /\/(?:c|codex\/tasks|codex\/cloud|codex|tasks)\/(?!settings|overview|scheduled|onboarding|new\b)(task_[0-9a-zA-Z_-]{4,}|[0-9a-fA-F]{8}-[0-9a-fA-F-]{27}|[0-9a-zA-Z_-]{8,})/,
     buildUrl: (id) => (id.startsWith('task_') ? `https://chatgpt.com/codex/tasks/${id}` : `https://chatgpt.com/c/${id}`),
     selectors: {
       sidebar: '[data-testid="stage-thread-flyout"], nav[aria-label], nav, aside, .bg-token-sidebar-surface-primary',
@@ -151,3 +152,64 @@ export const P = PLATFORMS[PLATFORM_KEY] || PLATFORMS.gemini;
 export const SELECTORS = P.selectors;
 
 export const PRESET_COLORS = ['#4285f4', '#34a853', '#fbbc04', '#ea4335', '#a142f4', '#24c1e0', '#ff6d00'];
+
+function parseRgbLuminance(colorStr) {
+  if (!colorStr || typeof colorStr !== 'string') return null;
+  const m = colorStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+  if (!m) return null;
+  if (m[4] !== undefined && parseFloat(m[4]) === 0) return null;
+  const r = Number(m[1]);
+  const g = Number(m[2]);
+  const b = Number(m[3]);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+export function detectHostTheme() {
+  try {
+    const html = document.documentElement;
+    const body = document.body;
+    const nodes = [html, body].filter(Boolean);
+
+    for (const el of nodes) {
+      for (const attr of ['data-theme', 'data-color-scheme', 'data-mode']) {
+        const val = (el.getAttribute?.(attr) || '').toLowerCase();
+        if (val.includes('light')) return 'light';
+        if (val.includes('dark')) return 'dark';
+      }
+      const cls = el.classList;
+      if (cls) {
+        if (cls.contains('light') || cls.contains('light-theme')) return 'light';
+        if (cls.contains('dark') || cls.contains('dark-theme')) return 'dark';
+      }
+    }
+
+    if (typeof getComputedStyle === 'function') {
+      if (html) {
+        const cs = (getComputedStyle(html).colorScheme || '').toLowerCase();
+        if (cs === 'light') return 'light';
+        if (cs === 'dark') return 'dark';
+      }
+      for (const el of [body, html].filter(Boolean)) {
+        const lum = parseRgbLuminance(getComputedStyle(el).backgroundColor);
+        if (lum !== null) {
+          return lum > 0.55 ? 'light' : 'dark';
+        }
+      }
+    }
+
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
+    }
+  } catch (_) {}
+  return 'dark';
+}
+
+export function syncHostTheme() {
+  const theme = detectHostTheme();
+  try {
+    document.documentElement?.setAttribute('data-gcm-theme', theme);
+  } catch (_) {}
+  return theme;
+}
