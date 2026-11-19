@@ -4,6 +4,22 @@
 
 ---
 
+## [v3.5.7] - 2026-11-19
+
+### 🇺🇸 English
+- **Cloud Sync Quota & Merge Protection**: Added additive local/cloud merge in `initCloudSync`, self-echo suppression on `storage.onChanged`, `QUOTA_BYTES_PER_ITEM` (8 KB) payload compaction, and `localOnly` view persistence to prevent quota exhaustion.
+- **Hardened Deletion & ID Resolution**: Strict exact/truncated-task matching in `resolveChatGptIdByTitle`, FNV-1a 64-bit hashing for Gemini `jslog` IDs, accurate active-chat redirect tracking, and full selection cleanup on `toggleSelectAll(false)` across filtered views.
+- **Host-Aware Theme, WCAG AA Contrast & Accessibility**: Automatic `data-gcm-theme="light|dark"` synchronization with the host AI platform DOM, high-contrast light mode tokens (`#174ea6`), keyboard-accessible pills/locks/swatches, `:focus-visible` rings, modal `Escape` handling, and rich paragraph `<p>` insertion for ProseMirror/Quill editors.
+- **Popup & Firefox MV3 Support**: Added `activeTab` permission, direct file-chooser import from popup with user activation, `browser_specific_settings.gecko.id`, and expanded the automated test suite to 40 tests.
+
+### 🇪🇸 Español
+- **Protección de Cuota y Fusión en Cloud Sync**: Fusión aditiva entre datos locales y de la nube en `initCloudSync`, supresión de eco propio en `storage.onChanged`, compactación bajo el límite `QUOTA_BYTES_PER_ITEM` (8 KB) y guardado `localOnly` de la vista.
+- **Seguridad en Borrado e Identificadores**: Coincidencia estricta por título en `resolveChatGptIdByTitle`, hash FNV-1a de 64 bits para IDs `jslog` en Gemini, seguimiento exacto de chats borrados para redirección y limpieza total de `selectedMap` al desmarcar "Todo" con filtros activos.
+- **Tema Adaptativo al Host, Contraste WCAG AA y Accesibilidad**: Sincronización automática `data-gcm-theme="light|dark"` con el DOM de la plataforma de IA, tokens de alto contraste en modo claro (`#174ea6`), navegación por teclado, anillos `:focus-visible`, cierre con `Escape` en modales e inserción de párrafos `<p>` en editores ProseMirror/Quill.
+- **Popup y Soporte Firefox MV3**: Permiso `activeTab`, importación JSON directa desde el popup con activación de usuario, `browser_specific_settings.gecko.id` y ampliación de la suite a 40 pruebas automatizadas.
+
+---
+
 ## [v3.5.6] - 2026-11-05
 
 ### 🇺🇸 English

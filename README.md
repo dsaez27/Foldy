@@ -2,11 +2,11 @@
   <img src="assets/foldy-full.svg" alt="Foldy" width="380" />
 </p>
 
-# Foldy v3.5.6: Gestor Universal de Carpetas para Gemini, ChatGPT, Claude, DeepSeek & OpenCode
+# Foldy v3.5.7: Gestor Universal de Carpetas para Gemini, ChatGPT, Claude, DeepSeek & OpenCode
 
 **Foldy** es una extensión de Chrome (Manifest V3) que transforma tu experiencia en **Google Gemini**, **OpenAI ChatGPT**, **Anthropic Claude**, **DeepSeek** y **OpenCode**: añade carpetas inteligentes con clasificación automática por palabras clave, sincronización en la nube (`chrome.storage.sync`), bóveda de Prompts rápidos, popup de control, atajos de teclado, barra superior contraíble, búsqueda instantánea, protección de chats con candado, selección múltiple, borrado masivo seguro, exportación a Markdown y respaldo/importación en JSON.
 
-## Novedades en v3.5.6
+## Novedades en v3.5.7
 
 - 🌐 **Soporte Universal Multi-IA**: Compatible con **Gemini**, **ChatGPT**, **Claude**, **DeepSeek** y **OpenCode**.
 - ☁️ **Cloud Sync Automático (`chrome.storage.sync`)**: Sincroniza carpetas, reglas, asignaciones, chats protegidos y prompts entre tus dispositivos.

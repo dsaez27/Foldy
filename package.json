@@ -1,6 +1,6 @@
 {
   "name": "foldy",
-  "version": "3.5.6",
+  "version": "3.5.7",
   "private": true,
   "description": "Foldy - Extensión de Navegador: carpetas inteligentes, bóveda de prompts, sincronización en la nube y borrado masivo para Gemini, ChatGPT, Claude, DeepSeek y OpenCode.",
   "type": "module",

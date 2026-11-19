@@ -1,9 +1,9 @@
-# Plan de Testing Detallado — Foldy v3.5.6
+# Plan de Testing Detallado — Foldy v3.5.7
 
 | Campo | Valor |
 |---|---|
 | Proyecto | **Foldy** |
-| Versión bajo prueba | `3.5.6` (`package.json`, `extension/manifest.json`) |
+| Versión bajo prueba | `3.5.7` (`package.json`, `extension/manifest.json`) |
 | Tipo de producto | Extensión de navegador WebExtension (Manifest V3) |
 | Stack de pruebas actual | `node:test` + `jsdom` + `chrome-storage-mock` (40 pruebas automatizadas: 12 unitarias + 28 de integración DOM + `scripts/validate-extension.mjs`) |
 | Navegadores objetivo | **Chrome, Edge, Brave, Firefox, Opera y Safari** (últimas versiones estables) |
