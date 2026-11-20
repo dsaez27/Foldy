@@ -2,6 +2,22 @@
 
 ---
 
+## [v3.6.0] - 2026-11-20
+
+### 🇺🇸 English
+- **Per-Platform Adaptive Identity (`D-01`)**: Stamped `data-gcm-platform` (`gemini`, `chatgpt`, `claude`, `deepseek`, `opencode`) to dynamically adapt accent RGB tokens, border radii, surface warmth, native font stacks, and the Foldy SVG logo gradient.
+- **Compact Sidebar Rows & Contextual Action Dock (`D-02`, `D-03`)**: Reclaimed horizontal title space with a `3px` colored folder accent bar, expandable micro-dot badge, progressive hover/selection checkboxes (`data-gcm-selection-mode`), and a contextual Selection Action Dock with `#gcm-selection-pill`, vertical dividers, and `<kbd>` hints (`M`, `L`, `⌫`).
+- **Quick Folder Editing & Illustrated Empty State (`D-04`)**: Added auto-rule sparkle indicator, in-pill edit pencil (`openCreateFolderModal` edit mode preserving assignments), `tabular-nums` counters, and `#gcm-empty-state` SVG card with 1-click reset.
+- **Command-Palette Prompt Vault & Popup Quota Meter (`D-05`, `D-06`)**: Upgraded the Prompt Vault with instant search, collapsible create/edit drawer, category tags, monospace preview, and copy/edit/insert actions; added a real-time `chrome.storage.sync` quota meter (`KB / 8.0 KB`) and platform proportion bars in the popup.
+
+### 🇪🇸 Español
+- **Identidad Adaptativa por Plataforma (`D-01`)**: Estampado de `data-gcm-platform` (`gemini`, `chatgpt`, `claude`, `deepseek`, `opencode`) para adaptar dinámicamente tokens de acento, radios, superficies, tipografías nativas y el degradado del logo Foldy.
+- **Filas Compactas y Dock Contextual de Selección (`D-02`, `D-03`)**: Recuperación de ancho para títulos con barra lateral de `3px`, micro-punto expansible, checkboxes progresivos (`data-gcm-selection-mode`) y barra contextual con contador `#gcm-selection-pill`, separadores e insignias `<kbd>` (`M`, `L`, `⌫`).
+- **Edición Rápida de Carpetas y Estado Vacío Ilustrado (`D-04`)**: Indicador de auto-reglas, botón lápiz para editar sin perder asignaciones, contadores `tabular-nums` y tarjeta SVG `#gcm-empty-state` con reinicio en 1 clic.
+- **Bóveda Command Palette y Medidor de Cuota en Popup (`D-05`, `D-06`)**: Búsqueda instantánea, drawer colapsable de creación/edición, etiquetas de categoría, vista previa monoespacio y acciones copiar/editar/insertar en Prompts; medidor en vivo de `chrome.storage.sync` (`KB / 8.0 KB`) y barras de proporción por plataforma en el popup.
+
+---
+
 ## [v3.5.7] - 2026-11-19
 
 ### 🇺🇸 English

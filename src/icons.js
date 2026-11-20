@@ -48,9 +48,8 @@ export const ICONS = {
       [
         el('defs', {}, [
           el('linearGradient', { id: gradId, x1: '0%', y1: '0%', x2: '100%', y2: '100%' }, [
-            el('stop', { offset: '0%', 'stop-color': '#5B6EF7' }),
-            el('stop', { offset: '50%', 'stop-color': '#3B82F6' }),
-            el('stop', { offset: '100%', 'stop-color': '#1DA1F2' })
+            el('stop', { offset: '0%', style: 'stop-color: var(--gcm-logo-stop-1, #5B6EF7)' }),
+            el('stop', { offset: '100%', style: 'stop-color: var(--gcm-logo-stop-2, #1DA1F2)' })
           ])
         ]),
         el('path', {
@@ -59,10 +58,10 @@ export const ICONS = {
         }),
         el('path', {
           d: 'M590 120 L844 374 L690 374 A100 100 0 0 1 590 274 Z',
-          fill: '#132238'
+          fill: 'var(--gcm-logo-flap, #132238)'
         }),
         el('rect', { x: 275, y: 405, width: 315, height: 62, rx: 31, fill: '#FFFFFF' }),
-        el('rect', { x: 275, y: 535, width: 415, height: 62, rx: 31, fill: '#CBE7FB' })
+        el('rect', { x: 275, y: 535, width: 415, height: 62, rx: 31, fill: 'rgba(255,255,255,0.75)' })
       ]
     );
   },
@@ -215,7 +214,67 @@ export const ICONS = {
       el('path', { d: 'M7 10v4' }),
       el('path', { d: 'M12 10v4' }),
       el('path', { d: 'M17 10v4' })
-    ])
+    ]),
+
+  editPencil: () =>
+    strokeSvg(11.5, 2.1, [
+      el('path', { d: 'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z' })
+    ]),
+
+  sparkle: () =>
+    strokeSvg(10.5, 2.2, [
+      el('path', { d: 'M12 3v3m0 12v3M3 12h3m12 0h3m-2.6-6.4-2.1 2.1M7.7 16.3l-2.1 2.1m0-12.8 2.1 2.1m8.6 8.6 2.1 2.1' })
+    ]),
+
+  copy: () =>
+    strokeSvg(12.5, 2, [
+      el('rect', { width: 14, height: 14, x: 8, y: 8, rx: 2, ry: 2 }),
+      el('path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' })
+    ]),
+
+  emptyFolderSearch: () =>
+    el(
+      'svg',
+      {
+        class: 'gcm-empty-svg',
+        viewBox: '0 0 64 52',
+        width: 56,
+        height: 44,
+        fill: 'none'
+      },
+      [
+        el('path', {
+          d: 'M8 14a4 4 0 0 1 4-4h14l4 4h22a4 4 0 0 1 4 4v22a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V14Z',
+          fill: 'rgba(var(--gcm-accent-rgb), 0.12)',
+          stroke: 'rgba(var(--gcm-accent-rgb), 0.45)',
+          'stroke-width': '1.75'
+        }),
+        el('line', {
+          x1: 16, y1: 24, x2: 32, y2: 24,
+          stroke: 'rgba(var(--gcm-accent-rgb), 0.4)',
+          'stroke-width': '2',
+          'stroke-linecap': 'round'
+        }),
+        el('line', {
+          x1: 16, y1: 30, x2: 26, y2: 30,
+          stroke: 'rgba(var(--gcm-accent-rgb), 0.28)',
+          'stroke-width': '2',
+          'stroke-linecap': 'round'
+        }),
+        el('circle', {
+          cx: 43, cy: 31, r: 8,
+          fill: 'var(--gcm-bg-input)',
+          stroke: 'rgb(var(--gcm-accent-rgb))',
+          'stroke-width': '2'
+        }),
+        el('path', {
+          d: 'm49 37 5 5',
+          stroke: 'rgb(var(--gcm-accent-rgb))',
+          'stroke-width': '2.2',
+          'stroke-linecap': 'round'
+        })
+      ]
+    )
 };
 
 /** Crea un nodo SVG limpio a partir de una función de `ICONS` (sin usar innerHTML ni DOMParser). */

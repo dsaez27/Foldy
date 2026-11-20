@@ -209,7 +209,13 @@ export function detectHostTheme() {
 export function syncHostTheme() {
   const theme = detectHostTheme();
   try {
-    document.documentElement?.setAttribute('data-gcm-theme', theme);
+    const root = document.documentElement;
+    if (root) {
+      root.setAttribute('data-gcm-theme', theme);
+      if (PLATFORM_KEY) {
+        root.setAttribute('data-gcm-platform', PLATFORM_KEY);
+      }
+    }
   } catch (_) {}
   return theme;
 }

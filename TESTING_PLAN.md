@@ -1,4 +1,4 @@
-# 🧪 Detailed Testing Plan / Plan de Testing Detallado — Foldy v3.5.7
+# 🧪 Detailed Testing Plan / Plan de Testing Detallado — Foldy v3.6.0
 
 > **Bilingual Documentation Policy / Política Bilingüe**: All project documents are provided in **English first**, followed by **Spanish**. / Todos los documentos del proyecto se publican en **inglés primero** y luego en **español**.
 
@@ -13,7 +13,7 @@
 | Field | Value |
 |---|---|
 | Project | **Foldy** |
-| Version Under Test | `3.5.7` (`package.json`, `extension/manifest.json`) |
+| Version Under Test | `3.6.0` (`package.json`, `extension/manifest.json`) |
 | Product Type | Browser WebExtension (Manifest V3) |
 | Automated Test Stack | `node:test` + `jsdom` + `chrome-storage-mock` (40 automated tests: 12 unit + 28 DOM integration + `scripts/validate-extension.mjs`) |
 | Target Browsers | **Chrome, Edge, Brave, Firefox, Opera, and Safari** (latest stable versions) |
@@ -23,7 +23,7 @@
 
 ## 1. Objective
 
-Define a rigorous, reproducible testing strategy to verify that **Foldy v3.5.7** runs safely, consistently, and without regressions across all **5 supported AI platforms** (Gemini, ChatGPT, Claude, DeepSeek, and OpenCode) and all **6 target browsers** in their latest versions:
+Define a rigorous, reproducible testing strategy to verify that **Foldy v3.6.0** runs safely, consistently, and without regressions across all **5 supported AI platforms** (Gemini, ChatGPT, Claude, DeepSeek, and OpenCode) and all **6 target browsers** in their latest versions:
 
 - **Chromium Family (Blink + V8):** Google Chrome, Microsoft Edge, Brave, Opera.
 - **Gecko Family (SpiderMonkey):** Mozilla Firefox.
@@ -144,7 +144,7 @@ A **Foldy** release is **APPROVED** only if:
 | Campo | Valor |
 |---|---|
 | Proyecto | **Foldy** |
-| Versión bajo prueba | `3.5.7` (`package.json`, `extension/manifest.json`) |
+| Versión bajo prueba | `3.6.0` (`package.json`, `extension/manifest.json`) |
 | Tipo de producto | Extensión de navegador WebExtension (Manifest V3) |
 | Stack de pruebas actual | `node:test` + `jsdom` + `chrome-storage-mock` (40 pruebas automatizadas: 12 unitarias + 28 de integración DOM + `scripts/validate-extension.mjs`) |
 | Navegadores objetivo | **Chrome, Edge, Brave, Firefox, Opera y Safari** (últimas versiones estables) |
@@ -154,7 +154,7 @@ A **Foldy** release is **APPROVED** only if:
 
 ## 1. Objetivo
 
-Definir una estrategia minuciosa y reproducible para verificar que **Foldy v3.5.7** funciona de forma segura, consistente y sin regresiones en las **5 plataformas de IA soportadas** (Gemini, ChatGPT, Claude, DeepSeek y OpenCode) y en los **6 navegadores objetivo** en sus últimas versiones:
+Definir una estrategia minuciosa y reproducible para verificar que **Foldy v3.6.0** funciona de forma segura, consistente y sin regresiones en las **5 plataformas de IA soportadas** (Gemini, ChatGPT, Claude, DeepSeek y OpenCode) y en los **6 navegadores objetivo** en sus últimas versiones:
 
 - **Familia Chromium (Blink + V8):** Google Chrome, Microsoft Edge, Brave, Opera.
 - **Familia Gecko (SpiderMonkey):** Mozilla Firefox.

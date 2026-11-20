@@ -55,6 +55,11 @@ export function applyFolderBadgesAndFilter(items) {
 
     row.classList.toggle('gcm-has-lock', isProtected);
     row.classList.toggle('gcm-has-badge', !!folder);
+    if (folder) {
+      row.style.setProperty('--gcm-row-folder-color', folder.color);
+    } else {
+      row.style.removeProperty('--gcm-row-folder-color');
+    }
 
     let lockEl = row.querySelector('.gcm-lock-icon');
     if (isProtected) {
@@ -92,11 +97,10 @@ export function applyFolderBadgesAndFilter(items) {
       if (badge.dataset.sig !== badgeSig) {
         badge.dataset.sig = badgeSig;
         badge.textContent = '';
+        badge.style.setProperty('--gcm-badge-color', folder.color);
 
         const dot = document.createElement('span');
         dot.className = 'gcm-badge-dot';
-        dot.style.backgroundColor = folder.color;
-        dot.style.boxShadow = `0 0 6px ${folder.color}`;
 
         const txt = document.createElement('span');
         txt.className = 'gcm-badge-text';
@@ -104,10 +108,6 @@ export function applyFolderBadgesAndFilter(items) {
 
         badge.appendChild(dot);
         badge.appendChild(txt);
-
-        badge.style.background = `linear-gradient(135deg, ${folder.color}44 0%, var(--gcm-badge-bg) 90%)`;
-        badge.style.color = 'var(--gcm-text-primary)';
-        badge.style.borderColor = `${folder.color}aa`;
       }
     } else if (badge) {
       badge.remove();

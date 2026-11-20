@@ -8,7 +8,7 @@ export function createChromeMock({
   initialSync = {},
   quotaBytesPerItem = 8192,
   maxWriteOpsPerMinute = 120,
-  version = '3.5.7'
+  version = '3.6.0'
 } = {}) {
   const syncStore = structuredClone(initialSync);
   const onChangedListeners = [];

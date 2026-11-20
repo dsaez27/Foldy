@@ -7,6 +7,23 @@ const REPO = 'dsaez27/Foldy';
 
 const releases = [
   {
+    tag: 'v3.6.0',
+    title: 'Foldy v3.6.0 — Adaptive Platform Design, Contextual Dock, Command Palette & Sync Quota Meter',
+    body: `### 🇺🇸 English
+- **Per-Platform Adaptive Identity (\`D-01\`)**: Stamped \`data-gcm-platform\` (\`gemini\`, \`chatgpt\`, \`claude\`, \`deepseek\`, \`opencode\`) to adapt accent RGB tokens, radii, surface warmth, native fonts, and the Foldy SVG logo gradient.
+- **Compact Sidebar Rows & Contextual Action Dock (\`D-02\`, \`D-03\`)**: Reclaimed title space with a \`3px\` folder accent bar, expandable micro-dot badge, progressive hover/selection checkboxes, and an elastic Selection Action Dock with \`<kbd>\` shortcut hints (\`M\`, \`L\`, \`⌫\`).
+- **Quick Folder Editing & Illustrated Empty State (\`D-04\`)**: Added auto-rule sparkle indicator, in-pill edit pencil preserving assignments, \`tabular-nums\` counters, and \`#gcm-empty-state\` SVG card.
+- **Command-Palette Prompt Vault & Popup Quota Meter (\`D-05\`, \`D-06\`)**: Instant search, collapsible create/edit drawer, category tags, monospace preview, and copy/edit/insert actions in the Prompt Vault; real-time \`chrome.storage.sync\` quota meter (\`KB / 8.0 KB\`) and platform proportion bars in the popup.
+
+---
+
+### 🇪🇸 Español
+- **Identidad Adaptativa por Plataforma (\`D-01\`)**: Estampado de \`data-gcm-platform\` (\`gemini\`, \`chatgpt\`, \`claude\`, \`deepseek\`, \`opencode\`) para adaptar tokens de acento, radios, superficies, tipografías y el degradado del logo Foldy.
+- **Filas Compactas y Dock Contextual de Selección (\`D-02\`, \`D-03\`)**: Barra lateral de \`3px\`, micro-punto expansible, checkboxes progresivos y barra contextual con contador, separadores e insignias \`<kbd>\` (\`M\`, \`L\`, \`⌫\`).
+- **Edición Rápida de Carpetas y Estado Vacío Ilustrado (\`D-04\`)**: Indicador de auto-reglas, lápiz para editar sin perder asignaciones, contadores \`tabular-nums\` y tarjeta SVG \`#gcm-empty-state\`.
+- **Bóveda Command Palette y Medidor de Cuota en Popup (\`D-05\`, \`D-06\`)**: Búsqueda instantánea, drawer de creación/edición, etiquetas, vista previa monoespacio y copiar/editar/insertar en Prompts; medidor en vivo de \`chrome.storage.sync\` (\`KB / 8.0 KB\`) y barras de proporción en el popup.`
+  },
+  {
     tag: 'v3.5.7',
     title: 'Foldy v3.5.7 — Cloud Sync Hardening, Deletion Safety, Host-Aware Theme & Accessibility',
     body: `### 🇺🇸 English

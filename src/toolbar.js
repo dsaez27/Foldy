@@ -5,11 +5,29 @@ import { toggleMoveToFolderPopover, toggleProtectSelected, toggleSelectAll } fro
 import { saveView, selectedMap, state, t } from './state.js';
 import { saveFolderData } from './storage.js';
 
+function appendButtonWithKbd(btn, iconBuilder, labelText, kbdText = null) {
+  setButtonIconText(btn, iconBuilder, labelText);
+  if (kbdText) {
+    const kbd = document.createElement('kbd');
+    kbd.className = 'gcm-kbd';
+    kbd.textContent = kbdText;
+    btn.appendChild(kbd);
+  }
+}
+
+function createToolbarSeparator() {
+  const sep = document.createElement('span');
+  sep.className = 'gcm-toolbar-sep';
+  sep.setAttribute('aria-hidden', 'true');
+  return sep;
+}
+
 export function createToolbar() {
   if (document.getElementById('gcm-toolbar')) return;
 
   const toolbar = document.createElement('div');
   toolbar.id = 'gcm-toolbar';
+  toolbar.dataset.gcmCount = '0';
 
   const headWrap = document.createElement('div');
   headWrap.className = 'gcm-toolbar-head';
@@ -54,11 +72,33 @@ export function createToolbar() {
   selectAllWrap.appendChild(selectAllCb);
   selectAllWrap.appendChild(selectAllText);
 
+  const countBadgeWrap = document.createElement('div');
+  countBadgeWrap.id = 'gcm-selection-pill';
+  countBadgeWrap.className = 'gcm-selection-pill';
+
+  const countNum = document.createElement('span');
+  countNum.id = 'gcm-selection-count';
+  countNum.className = 'gcm-selection-count-text';
+  countNum.textContent = state.folderState.lang === 'es' ? '0 seleccionados' : '0 selected';
+
+  const clearSelBtn = document.createElement('button');
+  clearSelBtn.type = 'button';
+  clearSelBtn.id = 'gcm-clear-selection-btn';
+  clearSelBtn.className = 'gcm-selection-clear-btn';
+  clearSelBtn.title = state.folderState.lang === 'es' ? 'Limpiar selección (Esc)' : 'Clear selection (Esc)';
+  clearSelBtn.appendChild(createIconElement(ICONS.close));
+  clearSelBtn.addEventListener('click', () => toggleSelectAll(false));
+
+  countBadgeWrap.appendChild(countNum);
+  countBadgeWrap.appendChild(clearSelBtn);
+
   const folderBtn = document.createElement('button');
   folderBtn.id = 'gcm-folder-btn';
   folderBtn.className = 'gcm-btn gcm-btn-folder';
   folderBtn.disabled = true;
-  setButtonIconText(folderBtn, ICONS.folder, t().folderBtn(0));
+  folderBtn.dataset.label = t().folderBtn(0);
+  folderBtn.dataset.lang = state.folderState.lang;
+  appendButtonWithKbd(folderBtn, ICONS.folder, state.folderState.lang === 'es' ? 'Carpeta' : 'Folder', 'M');
   folderBtn.title = t().folderBtnTitle;
   folderBtn.addEventListener('click', () => toggleMoveToFolderPopover(folderBtn));
 
@@ -66,7 +106,8 @@ export function createToolbar() {
   protectBtn.id = 'gcm-protect-btn';
   protectBtn.className = 'gcm-btn gcm-btn-neutral';
   protectBtn.disabled = true;
-  setButtonIconText(protectBtn, ICONS.lock, t().protectBtn);
+  protectBtn.dataset.lang = state.folderState.lang;
+  appendButtonWithKbd(protectBtn, ICONS.lock, t().protectBtn, 'L');
   protectBtn.title = t().protectBtnTitle;
   protectBtn.addEventListener('click', toggleProtectSelected);
 
@@ -81,7 +122,9 @@ export function createToolbar() {
   deleteBtn.id = 'gcm-delete-btn';
   deleteBtn.className = 'gcm-btn gcm-btn-danger';
   deleteBtn.disabled = true;
-  setButtonIconText(deleteBtn, ICONS.trash, t().deleteBtn(0));
+  deleteBtn.dataset.label = t().deleteBtn(0);
+  deleteBtn.dataset.lang = state.folderState.lang;
+  appendButtonWithKbd(deleteBtn, ICONS.trash, state.folderState.lang === 'es' ? 'Borrar' : 'Delete', '⌫');
   deleteBtn.addEventListener('click', deleteSelectedChats);
 
   const stopBtn = document.createElement('button');
@@ -93,9 +136,12 @@ export function createToolbar() {
 
   toolbar.appendChild(headWrap);
   toolbar.appendChild(selectAllWrap);
+  toolbar.appendChild(countBadgeWrap);
+  toolbar.appendChild(createToolbarSeparator());
   toolbar.appendChild(folderBtn);
   toolbar.appendChild(protectBtn);
   toolbar.appendChild(exportBtn);
+  toolbar.appendChild(createToolbarSeparator());
   toolbar.appendChild(deleteBtn);
   toolbar.appendChild(stopBtn);
 
@@ -236,6 +282,9 @@ function enableToolbarDrag(toolbar) {
 }
 
 export function updateToolbarState() {
+  const toolbar = document.getElementById('gcm-toolbar');
+  const countNum = document.getElementById('gcm-selection-count');
+  const clearSelBtn = document.getElementById('gcm-clear-selection-btn');
   const folderBtn = document.getElementById('gcm-folder-btn');
   const protectBtn = document.getElementById('gcm-protect-btn');
   const exportBtn = document.getElementById('gcm-export-btn');
@@ -244,6 +293,20 @@ export function updateToolbarState() {
   const selectAllCb = document.getElementById('gcm-select-all');
 
   if (!deleteBtn || !stopBtn || !folderBtn) return;
+
+  const count = selectedMap.size;
+  const isEs = state.folderState.lang === 'es';
+  document.documentElement.toggleAttribute('data-gcm-selection-mode', count > 0);
+  if (toolbar) {
+    toolbar.dataset.gcmCount = String(count);
+    toolbar.classList.toggle('gcm-has-selection', count > 0 || state.deletionInProgress);
+  }
+  if (countNum) {
+    countNum.textContent = isEs ? `${count} seleccionado${count === 1 ? '' : 's'}` : `${count} selected`;
+  }
+  if (clearSelBtn) {
+    clearSelBtn.title = isEs ? 'Limpiar selección (Esc)' : 'Clear selection (Esc)';
+  }
 
   if (state.deletionInProgress) {
     folderBtn.style.display = 'none';
@@ -278,23 +341,28 @@ export function updateToolbarState() {
       selectAllCb.indeterminate = visibleChecked > 0 && !allChecked;
     }
 
-    const count = selectedMap.size;
     folderBtn.disabled = count === 0;
     const fText = t().folderBtn(count);
-    if (folderBtn.dataset.label !== fText) {
+    if (folderBtn.dataset.label !== fText || folderBtn.dataset.lang !== state.folderState.lang) {
       folderBtn.dataset.label = fText;
-      setButtonIconText(folderBtn, ICONS.folder, fText);
+      folderBtn.dataset.lang = state.folderState.lang;
+      appendButtonWithKbd(folderBtn, ICONS.folder, isEs ? 'Carpeta' : 'Folder', 'M');
     }
 
     if (protectBtn) {
       protectBtn.disabled = count === 0;
+      if (protectBtn.dataset.lang !== state.folderState.lang) {
+        protectBtn.dataset.lang = state.folderState.lang;
+        appendButtonWithKbd(protectBtn, ICONS.lock, t().protectBtn, 'L');
+      }
     }
 
     deleteBtn.disabled = count === 0;
     const dText = t().deleteBtn(count);
-    if (deleteBtn.dataset.label !== dText) {
+    if (deleteBtn.dataset.label !== dText || deleteBtn.dataset.lang !== state.folderState.lang) {
       deleteBtn.dataset.label = dText;
-      setButtonIconText(deleteBtn, ICONS.trash, dText);
+      deleteBtn.dataset.lang = state.folderState.lang;
+      appendButtonWithKbd(deleteBtn, ICONS.trash, isEs ? 'Borrar' : 'Delete', '⌫');
     }
   }
 }

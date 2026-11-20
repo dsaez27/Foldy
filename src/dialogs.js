@@ -3,14 +3,17 @@ import { PRESET_COLORS } from './platform.js';
 import { autoClassifiedVisited, state, t } from './state.js';
 import { saveFolderData } from './storage.js';
 
-export function openCreateFolderModal(onCreatedCallback = null) {
+export function openCreateFolderModal(onCreatedCallback = null, existingFolder = null) {
   const existing = document.getElementById('gcm-modal-overlay');
   if (existing) {
     existing._gcmClose?.(false);
     existing.remove();
   }
 
-  let chosenColor = PRESET_COLORS[state.folderState.folders.length % PRESET_COLORS.length];
+  const isEdit = Boolean(existingFolder);
+  let chosenColor = isEdit
+    ? (existingFolder.color || PRESET_COLORS[0])
+    : PRESET_COLORS[state.folderState.folders.length % PRESET_COLORS.length];
 
   const overlay = document.createElement('div');
   overlay.id = 'gcm-modal-overlay';
@@ -28,7 +31,7 @@ export function openCreateFolderModal(onCreatedCallback = null) {
 
   const title = document.createElement('div');
   title.className = 'gcm-modal-title';
-  title.textContent = t().modalNewFolderTitle;
+  title.textContent = isEdit ? t().modalEditFolderTitle : t().modalNewFolderTitle;
 
   const desc = document.createElement('div');
   desc.className = 'gcm-modal-desc';
@@ -38,11 +41,17 @@ export function openCreateFolderModal(onCreatedCallback = null) {
   inputName.type = 'text';
   inputName.className = 'gcm-modal-input';
   inputName.placeholder = t().modalFolderNamePlaceholder;
+  if (isEdit) {
+    inputName.value = existingFolder.name || '';
+  }
 
   const inputKeywords = document.createElement('input');
   inputKeywords.type = 'text';
   inputKeywords.className = 'gcm-modal-input';
   inputKeywords.placeholder = t().modalKeywordsPlaceholder;
+  if (isEdit && Array.isArray(existingFolder.keywords)) {
+    inputKeywords.value = existingFolder.keywords.join(', ');
+  }
 
   const colorRow = document.createElement('div');
   colorRow.className = 'gcm-color-picker-row';
@@ -76,7 +85,7 @@ export function openCreateFolderModal(onCreatedCallback = null) {
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'gcm-btn gcm-btn-stop';
-  saveBtn.textContent = t().createFolderConfirm;
+  saveBtn.textContent = isEdit ? t().saveFolderConfirm : t().createFolderConfirm;
 
   const handleSave = () => {
     const name = inputName.value.trim();
@@ -89,19 +98,31 @@ export function openCreateFolderModal(onCreatedCallback = null) {
       .map((k) => k.trim().toLowerCase())
       .filter(Boolean);
 
-    const newFolder = {
-      id: 'f_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
-      name,
-      color: chosenColor,
-      keywords
-    };
-    state.folderState.folders.push(newFolder);
+    let savedFolder;
+    if (isEdit) {
+      const target = state.folderState.folders.find((f) => f.id === existingFolder.id);
+      if (target) {
+        target.name = name;
+        target.color = chosenColor;
+        target.keywords = keywords;
+        savedFolder = target;
+      }
+    } else {
+      savedFolder = {
+        id: 'f_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+        name,
+        color: chosenColor,
+        keywords
+      };
+      state.folderState.folders.push(savedFolder);
+    }
+
     autoClassifiedVisited.clear();
     saveFolderData(state.folderState);
     closeModal();
     refreshUI();
-    if (typeof onCreatedCallback === 'function') {
-      onCreatedCallback(newFolder);
+    if (typeof onCreatedCallback === 'function' && savedFolder) {
+      onCreatedCallback(savedFolder);
     }
   };
 

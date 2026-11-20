@@ -75,11 +75,15 @@ export function openPromptsModal() {
     state.folderState.prompts = t().defaultPrompts.map((p) => ({ ...p }));
   }
 
+  const isEs = state.folderState.lang === 'es';
+  let filterQuery = '';
+  let editingPromptId = null;
+
   const overlay = document.createElement('div');
   overlay.id = 'gcm-modal-overlay';
 
   const card = document.createElement('div');
-  card.className = 'gcm-modal-card gcm-prompts-modal-card';
+  card.className = 'gcm-modal-card gcm-prompts-modal-card gcm-cmd-palette';
   card.setAttribute('role', 'dialog');
   card.setAttribute('aria-modal', 'true');
 
@@ -89,50 +93,186 @@ export function openPromptsModal() {
   };
   overlay._gcmClose = closeModal;
 
-  const title = document.createElement('div');
-  title.className = 'gcm-modal-title gcm-modal-title-icon';
-  setButtonIconText(title, ICONS.zap, t().modalPromptsTitle);
+  // 1. Command Palette Top Search & Header Bar
+  const cmdHeader = document.createElement('div');
+  cmdHeader.className = 'gcm-cmd-header';
 
-  const desc = document.createElement('div');
-  desc.className = 'gcm-modal-desc';
-  desc.textContent = t().modalPromptsDesc;
+  const searchIcon = createIconElement(ICONS.search);
+  searchIcon.classList.add('gcm-cmd-search-icon');
 
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'gcm-cmd-search-input';
+  searchInput.placeholder = t().cmdSearchPlaceholder;
+
+  const toggleFormBtn = document.createElement('button');
+  toggleFormBtn.type = 'button';
+  toggleFormBtn.className = 'gcm-btn gcm-btn-folder gcm-cmd-new-btn';
+  setButtonIconText(toggleFormBtn, ICONS.plus, t().cmdNewBtn);
+
+  cmdHeader.appendChild(searchIcon);
+  cmdHeader.appendChild(searchInput);
+  cmdHeader.appendChild(toggleFormBtn);
+
+  // 2. Collapsible Create / Edit Drawer
+  const formBox = document.createElement('div');
+  formBox.className = 'gcm-prompt-form gcm-cmd-drawer';
+  formBox.style.display = 'none';
+
+  const inputTitle = document.createElement('input');
+  inputTitle.type = 'text';
+  inputTitle.className = 'gcm-modal-input';
+  inputTitle.placeholder = t().promptTitlePlaceholder;
+
+  const inputCategory = document.createElement('input');
+  inputCategory.type = 'text';
+  inputCategory.className = 'gcm-modal-input';
+  inputCategory.placeholder = t().promptCategoryPlaceholder;
+
+  const inputBody = document.createElement('textarea');
+  inputBody.className = 'gcm-modal-input gcm-modal-textarea gcm-mono-textarea';
+  inputBody.placeholder = t().promptBodyPlaceholder;
+  inputBody.rows = 3;
+
+  const formActions = document.createElement('div');
+  formActions.className = 'gcm-cmd-drawer-actions';
+
+  const cancelEditBtn = document.createElement('button');
+  cancelEditBtn.type = 'button';
+  cancelEditBtn.className = 'gcm-btn gcm-btn-cancel';
+  cancelEditBtn.textContent = t().cancel;
+
+  const savePromptBtn = document.createElement('button');
+  savePromptBtn.type = 'button';
+  savePromptBtn.className = 'gcm-btn gcm-btn-stop gcm-add-prompt-submit';
+  setButtonIconText(savePromptBtn, ICONS.plus, t().addPromptBtn);
+
+  formActions.appendChild(cancelEditBtn);
+  formActions.appendChild(savePromptBtn);
+  formBox.appendChild(inputTitle);
+  formBox.appendChild(inputCategory);
+  formBox.appendChild(inputBody);
+  formBox.appendChild(formActions);
+
+  const openDrawer = (promptToEdit = null) => {
+    editingPromptId = promptToEdit ? promptToEdit.id : null;
+    inputTitle.value = promptToEdit ? promptToEdit.title : '';
+    inputCategory.value = promptToEdit?.category || '';
+    inputBody.value = promptToEdit ? promptToEdit.content.trim() : '';
+    setButtonIconText(
+      savePromptBtn,
+      promptToEdit ? ICONS.editPencil : ICONS.plus,
+      promptToEdit ? t().updatePromptBtn : t().addPromptBtn
+    );
+    formBox.style.display = 'flex';
+    inputTitle.focus();
+  };
+
+  const closeDrawer = () => {
+    editingPromptId = null;
+    inputTitle.value = '';
+    inputCategory.value = '';
+    inputBody.value = '';
+    formBox.style.display = 'none';
+  };
+
+  toggleFormBtn.addEventListener('click', () => {
+    if (formBox.style.display === 'none') openDrawer(null);
+    else closeDrawer();
+  });
+  cancelEditBtn.addEventListener('click', closeDrawer);
+
+  // 3. Prompt List Container
   const listContainer = document.createElement('div');
   listContainer.className = 'gcm-prompts-list';
 
+  const inferCategory = (p) => {
+    if (p.category) return p.category;
+    const lower = (p.title + ' ' + p.content).toLowerCase();
+    if (/código|code|bug|script|sql|react|python/.test(lower)) return isEs ? 'Código' : 'Code';
+    if (/resumen|summary|ejecutivo|bullet/.test(lower)) return isEs ? 'Síntesis' : 'Summary';
+    if (/traduc|translat|idioma|english/.test(lower)) return isEs ? 'Idiomas' : 'Language';
+    return 'General';
+  };
+
   const renderPromptsList = () => {
     listContainer.textContent = '';
-    if (state.folderState.prompts.length === 0) {
+    const q = filterQuery.trim().toLowerCase();
+    const filtered = state.folderState.prompts.filter(
+      (p) =>
+        !q ||
+        p.title.toLowerCase().includes(q) ||
+        p.content.toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q)
+    );
+
+    if (filtered.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'gcm-prompts-empty';
-      empty.textContent = t().promptsEmpty;
+      empty.textContent = q ? t().promptsNoResults(filterQuery) : t().promptsEmpty;
       listContainer.appendChild(empty);
       return;
     }
-    state.folderState.prompts.forEach((p) => {
+
+    filtered.forEach((p, idx) => {
       const item = document.createElement('div');
-      item.className = 'gcm-prompt-item';
+      item.className = 'gcm-prompt-item' + (idx === 0 && q ? ' gcm-prompt-item-active' : '');
+      item.setAttribute('tabindex', '0');
 
       const info = document.createElement('div');
       info.className = 'gcm-prompt-info';
 
-      const itemTitle = document.createElement('div');
+      const titleRow = document.createElement('div');
+      titleRow.className = 'gcm-prompt-title-row';
+
+      const itemTitle = document.createElement('span');
       itemTitle.className = 'gcm-prompt-item-title';
       itemTitle.textContent = p.title;
 
+      const tag = document.createElement('span');
+      tag.className = 'gcm-prompt-tag';
+      tag.textContent = inferCategory(p);
+
+      titleRow.appendChild(itemTitle);
+      titleRow.appendChild(tag);
+
       const itemPreview = document.createElement('div');
       itemPreview.className = 'gcm-prompt-item-preview';
-      itemPreview.textContent = p.content.trim().slice(0, 110) + (p.content.length > 110 ? '…' : '');
+      itemPreview.textContent = p.content.trim().slice(0, 140) + (p.content.length > 140 ? '…' : '');
 
-      info.appendChild(itemTitle);
+      info.appendChild(titleRow);
       info.appendChild(itemPreview);
 
       const itemActions = document.createElement('div');
       itemActions.className = 'gcm-prompt-item-actions';
 
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'gcm-prompt-icon-btn';
+      copyBtn.appendChild(createIconElement(ICONS.copy));
+      copyBtn.title = t().copyPromptTitle;
+      copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try {
+          navigator.clipboard?.writeText(p.content.trim());
+        } catch (_) {}
+        updateStatusToast(t().toastPromptCopied, null, null, 2400);
+      });
+
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'gcm-prompt-icon-btn';
+      editBtn.appendChild(createIconElement(ICONS.editPencil));
+      editBtn.title = t().editPromptTitle;
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDrawer(p);
+      });
+
       const useBtn = document.createElement('button');
+      useBtn.type = 'button';
       useBtn.className = 'gcm-btn gcm-btn-stop gcm-prompt-use-btn';
-      useBtn.textContent = t().insertPromptBtn;
+      useBtn.textContent = `${t().insertPromptBtn} ↵`;
       useBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         closeModal();
@@ -140,7 +280,8 @@ export function openPromptsModal() {
       });
 
       const delBtn = document.createElement('button');
-      delBtn.className = 'gcm-prompt-del-btn';
+      delBtn.type = 'button';
+      delBtn.className = 'gcm-prompt-icon-btn gcm-prompt-del-btn';
       delBtn.appendChild(createIconElement(ICONS.close));
       delBtn.title = t().deletePromptTitle;
       delBtn.addEventListener('click', (e) => {
@@ -150,12 +291,21 @@ export function openPromptsModal() {
         renderPromptsList();
       });
 
+      itemActions.appendChild(copyBtn);
+      itemActions.appendChild(editBtn);
       itemActions.appendChild(useBtn);
       itemActions.appendChild(delBtn);
 
       item.addEventListener('click', () => {
         closeModal();
         insertPromptIntoChat(p.content);
+      });
+      item.addEventListener('keydown', (e) => {
+        if (e.target === item && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          closeModal();
+          insertPromptIntoChat(p.content);
+        }
       });
 
       item.appendChild(info);
@@ -164,55 +314,57 @@ export function openPromptsModal() {
     });
   };
 
-  renderPromptsList();
+  searchInput.addEventListener('input', (e) => {
+    filterQuery = e.target.value;
+    renderPromptsList();
+  });
 
-  const formBox = document.createElement('div');
-  formBox.className = 'gcm-prompt-form';
-
-  const inputTitle = document.createElement('input');
-  inputTitle.type = 'text';
-  inputTitle.className = 'gcm-modal-input';
-  inputTitle.placeholder = t().promptTitlePlaceholder;
-
-  const inputBody = document.createElement('textarea');
-  inputBody.className = 'gcm-modal-input gcm-modal-textarea';
-  inputBody.placeholder = t().promptBodyPlaceholder;
-  inputBody.rows = 3;
-
-  const addPromptBtn = document.createElement('button');
-  addPromptBtn.className = 'gcm-btn gcm-btn-folder gcm-add-prompt-submit';
-  setButtonIconText(addPromptBtn, ICONS.plus, t().addPromptBtn);
-  addPromptBtn.addEventListener('click', () => {
+  savePromptBtn.addEventListener('click', () => {
     const newTitle = inputTitle.value.trim();
+    const newCat = inputCategory.value.trim();
     const newBody = inputBody.value.trim();
     if (!newTitle || !newBody) {
       (!newTitle ? inputTitle : inputBody).focus();
       return;
     }
-    state.folderState.prompts.push({
-      id: 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
-      title: newTitle,
-      content: newBody + '\n\n'
-    });
+    if (editingPromptId) {
+      const target = state.folderState.prompts.find((p) => p.id === editingPromptId);
+      if (target) {
+        target.title = newTitle;
+        target.category = newCat || undefined;
+        target.content = newBody + '\n\n';
+      }
+    } else {
+      state.folderState.prompts.push({
+        id: 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+        title: newTitle,
+        category: newCat || undefined,
+        content: newBody + '\n\n'
+      });
+    }
     saveFolderData(state.folderState);
-    inputTitle.value = '';
-    inputBody.value = '';
+    closeDrawer();
     renderPromptsList();
   });
 
-  formBox.appendChild(inputTitle);
-  formBox.appendChild(inputBody);
-  formBox.appendChild(addPromptBtn);
+  renderPromptsList();
 
-  const actions = document.createElement('div');
-  actions.className = 'gcm-modal-actions';
+  // 4. Command Palette Footer with Keyboard Hints
+  const cmdFooter = document.createElement('div');
+  cmdFooter.className = 'gcm-cmd-footer';
+
+  const footerHint = document.createElement('span');
+  footerHint.className = 'gcm-cmd-footer-hint';
+  footerHint.textContent = t().cmdFooterHint;
 
   const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
   closeBtn.className = 'gcm-btn gcm-btn-cancel';
   closeBtn.textContent = t().cancel;
   closeBtn.addEventListener('click', closeModal);
 
-  actions.appendChild(closeBtn);
+  cmdFooter.appendChild(footerHint);
+  cmdFooter.appendChild(closeBtn);
 
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeModal();
@@ -225,11 +377,11 @@ export function openPromptsModal() {
   }
   document.addEventListener('keydown', onEsc);
 
-  card.appendChild(title);
-  card.appendChild(desc);
-  card.appendChild(listContainer);
+  card.appendChild(cmdHeader);
   card.appendChild(formBox);
-  card.appendChild(actions);
+  card.appendChild(listContainer);
+  card.appendChild(cmdFooter);
   overlay.appendChild(card);
   document.body.appendChild(overlay);
+  setTimeout(() => searchInput.focus(), 40);
 }

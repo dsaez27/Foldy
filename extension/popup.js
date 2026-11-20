@@ -60,7 +60,8 @@ function detectActivePlatformKey(urlStr) {
 
 const POPUP_I18N = {
   es: {
-    syncActive: 'Cloud Sync Activo',
+    syncActive: 'Cloud Sync',
+    quotaTrackTitle: 'Uso de cuota de chrome.storage.sync por plataforma (Máx 8 KB)',
     platformsTitle: 'Plataformas IA Soportadas',
     actionsTitle: 'Acciones en Pestaña Activa',
     activeBadge: 'ACTIVA',
@@ -74,7 +75,8 @@ const POPUP_I18N = {
     langBtnTitle: 'Cambiar idioma (Español / English)'
   },
   en: {
-    syncActive: 'Cloud Sync Active',
+    syncActive: 'Cloud Sync',
+    quotaTrackTitle: 'chrome.storage.sync quota usage per platform (Max 8 KB)',
     platformsTitle: 'Supported AI Platforms',
     actionsTitle: 'Active Tab Actions',
     activeBadge: 'ACTIVE',
@@ -103,6 +105,8 @@ function applyPopupTranslations() {
   const langBtn = document.getElementById('cf-lang-btn');
   if (langBtn) langBtn.title = tr.langBtnTitle;
   setTxt('cf-sync-text', tr.syncActive);
+  const quotaTrack = document.getElementById('cf-quota-track');
+  if (quotaTrack) quotaTrack.title = tr.quotaTrackTitle;
   setTxt('cf-platforms-title', tr.platformsTitle);
   setTxt('cf-actions-title', tr.actionsTitle);
   setTxt('cf-lbl-toggle', tr.btnPanel);
@@ -126,24 +130,66 @@ function applyPopupTranslations() {
   }
 }
 
+const SYNC_ITEM_QUOTA_BYTES = 8192; // chrome.storage.sync.QUOTA_BYTES_PER_ITEM
+
+function measureKeyBytes(storageKey, dataObj) {
+  try {
+    if (!dataObj || Object.keys(dataObj).length === 0) return 0;
+    const raw = JSON.stringify(dataObj);
+    return new Blob([raw]).size + storageKey.length;
+  } catch (_) {
+    return 0;
+  }
+}
+
+function updateQuotaMeter(syncData = {}, activePlatformKey = null) {
+  const quotaText = document.getElementById('cf-quota-text');
+  const quotaFill = document.getElementById('cf-quota-fill');
+  if (!quotaText || !quotaFill) return;
+
+  let targetBytes = 0;
+  const activePlat = PLATFORM_LIST.find((p) => p.key === activePlatformKey);
+  if (activePlat && syncData[activePlat.storageKey]) {
+    targetBytes = measureKeyBytes(activePlat.storageKey, syncData[activePlat.storageKey]);
+  } else {
+    PLATFORM_LIST.forEach((p) => {
+      const b = measureKeyBytes(p.storageKey, syncData[p.storageKey]);
+      if (b > targetBytes) targetBytes = b;
+    });
+  }
+
+  const kbUsed = (targetBytes / 1024).toFixed(1);
+  const pct = Math.min(100, Math.round((targetBytes / SYNC_ITEM_QUOTA_BYTES) * 100));
+  quotaText.textContent = `${kbUsed} / 8.0 KB`;
+  quotaFill.style.width = `${targetBytes > 0 ? Math.max(4, pct) : 0}%`;
+  quotaFill.dataset.level = pct >= 85 ? 'danger' : pct >= 65 ? 'warn' : 'ok';
+}
+
 function renderPlatforms(syncData = {}, activePlatformKey = null) {
   const container = document.getElementById('cf-platforms-list');
   if (!container) return;
   container.textContent = '';
   const tr = POPUP_I18N[currentPopupLang] || POPUP_I18N.es;
 
+  updateQuotaMeter(syncData, activePlatformKey);
+
   PLATFORM_LIST.forEach((p) => {
     const data = syncData[p.storageKey] || {};
     const foldersCount = Array.isArray(data.folders) ? data.folders.length : 0;
     const assignedCount = data.assignments && typeof data.assignments === 'object' ? Object.keys(data.assignments).length : 0;
     const lockedCount = data.protectedIds && typeof data.protectedIds === 'object' ? Object.keys(data.protectedIds).length : 0;
+    const keyBytes = measureKeyBytes(p.storageKey, data);
 
     const isCurrent = p.key === activePlatformKey;
     const card = document.createElement('a');
     card.className = 'cf-platform-card' + (isCurrent ? ' cf-active-platform' : '');
+    card.style.setProperty('--cf-plat-color', p.color);
     card.href = p.url;
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
+
+    const topRow = document.createElement('div');
+    topRow.className = 'cf-platform-top';
 
     const left = document.createElement('div');
     left.className = 'cf-platform-left';
@@ -169,13 +215,34 @@ function renderPlatforms(syncData = {}, activePlatformKey = null) {
 
     const stats = document.createElement('span');
     stats.className = 'cf-platform-stats';
-    stats.title = tr.statsTooltip(foldersCount, assignedCount, lockedCount);
+    stats.title = `${tr.statsTooltip(foldersCount, assignedCount, lockedCount)} · ${(keyBytes / 1024).toFixed(1)}/8.0 KB`;
     stats.appendChild(makeStatPill(POPUP_ICONS.folder, foldersCount));
     stats.appendChild(makeStatPill(POPUP_ICONS.chat, assignedCount));
     stats.appendChild(makeStatPill(POPUP_ICONS.lock, lockedCount));
 
-    card.appendChild(left);
-    card.appendChild(stats);
+    topRow.appendChild(left);
+    topRow.appendChild(stats);
+
+    const meterTrack = document.createElement('div');
+    meterTrack.className = 'cf-card-meter';
+
+    const totalActivity = Math.max(10, assignedCount + lockedCount);
+    const assignedPct = Math.min(100, Math.round((assignedCount / totalActivity) * 100));
+    const lockedPct = Math.min(100 - assignedPct, Math.round((lockedCount / totalActivity) * 100));
+
+    const fillAssigned = document.createElement('span');
+    fillAssigned.className = 'cf-card-meter-assigned';
+    fillAssigned.style.width = `${assignedPct}%`;
+
+    const fillLocked = document.createElement('span');
+    fillLocked.className = 'cf-card-meter-locked';
+    fillLocked.style.width = `${lockedPct}%`;
+
+    meterTrack.appendChild(fillAssigned);
+    meterTrack.appendChild(fillLocked);
+
+    card.appendChild(topRow);
+    card.appendChild(meterTrack);
     container.appendChild(card);
   });
 }

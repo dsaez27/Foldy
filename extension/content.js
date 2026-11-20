@@ -45,9 +45,8 @@
         [
           el("defs", {}, [
             el("linearGradient", { id: gradId, x1: "0%", y1: "0%", x2: "100%", y2: "100%" }, [
-              el("stop", { offset: "0%", "stop-color": "#5B6EF7" }),
-              el("stop", { offset: "50%", "stop-color": "#3B82F6" }),
-              el("stop", { offset: "100%", "stop-color": "#1DA1F2" })
+              el("stop", { offset: "0%", style: "stop-color: var(--gcm-logo-stop-1, #5B6EF7)" }),
+              el("stop", { offset: "100%", style: "stop-color: var(--gcm-logo-stop-2, #1DA1F2)" })
             ])
           ]),
           el("path", {
@@ -56,10 +55,10 @@
           }),
           el("path", {
             d: "M590 120 L844 374 L690 374 A100 100 0 0 1 590 274 Z",
-            fill: "#132238"
+            fill: "var(--gcm-logo-flap, #132238)"
           }),
           el("rect", { x: 275, y: 405, width: 315, height: 62, rx: 31, fill: "#FFFFFF" }),
-          el("rect", { x: 275, y: 535, width: 415, height: 62, rx: 31, fill: "#CBE7FB" })
+          el("rect", { x: 275, y: 535, width: 415, height: 62, rx: 31, fill: "rgba(255,255,255,0.75)" })
         ]
       );
     },
@@ -170,7 +169,67 @@
       el("path", { d: "M7 10v4" }),
       el("path", { d: "M12 10v4" }),
       el("path", { d: "M17 10v4" })
-    ])
+    ]),
+    editPencil: () => strokeSvg(11.5, 2.1, [
+      el("path", { d: "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" })
+    ]),
+    sparkle: () => strokeSvg(10.5, 2.2, [
+      el("path", { d: "M12 3v3m0 12v3M3 12h3m12 0h3m-2.6-6.4-2.1 2.1M7.7 16.3l-2.1 2.1m0-12.8 2.1 2.1m8.6 8.6 2.1 2.1" })
+    ]),
+    copy: () => strokeSvg(12.5, 2, [
+      el("rect", { width: 14, height: 14, x: 8, y: 8, rx: 2, ry: 2 }),
+      el("path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" })
+    ]),
+    emptyFolderSearch: () => el(
+      "svg",
+      {
+        class: "gcm-empty-svg",
+        viewBox: "0 0 64 52",
+        width: 56,
+        height: 44,
+        fill: "none"
+      },
+      [
+        el("path", {
+          d: "M8 14a4 4 0 0 1 4-4h14l4 4h22a4 4 0 0 1 4 4v22a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V14Z",
+          fill: "rgba(var(--gcm-accent-rgb), 0.12)",
+          stroke: "rgba(var(--gcm-accent-rgb), 0.45)",
+          "stroke-width": "1.75"
+        }),
+        el("line", {
+          x1: 16,
+          y1: 24,
+          x2: 32,
+          y2: 24,
+          stroke: "rgba(var(--gcm-accent-rgb), 0.4)",
+          "stroke-width": "2",
+          "stroke-linecap": "round"
+        }),
+        el("line", {
+          x1: 16,
+          y1: 30,
+          x2: 26,
+          y2: 30,
+          stroke: "rgba(var(--gcm-accent-rgb), 0.28)",
+          "stroke-width": "2",
+          "stroke-linecap": "round"
+        }),
+        el("circle", {
+          cx: 43,
+          cy: 31,
+          r: 8,
+          fill: "var(--gcm-bg-input)",
+          stroke: "rgb(var(--gcm-accent-rgb))",
+          "stroke-width": "2"
+        }),
+        el("path", {
+          d: "m49 37 5 5",
+          stroke: "rgb(var(--gcm-accent-rgb))",
+          "stroke-width": "2.2",
+          "stroke-linecap": "round"
+        })
+      ]
+    )
   };
   function createIconElement(iconBuilder) {
     if (typeof iconBuilder === "function") {
@@ -376,7 +435,13 @@
   function syncHostTheme() {
     const theme = detectHostTheme();
     try {
-      document.documentElement?.setAttribute("data-gcm-theme", theme);
+      const root = document.documentElement;
+      if (root) {
+        root.setAttribute("data-gcm-theme", theme);
+        if (PLATFORM_KEY) {
+          root.setAttribute("data-gcm-platform", PLATFORM_KEY);
+        }
+      }
     } catch (_) {
     }
     return theme;
@@ -403,7 +468,10 @@
       pillProtected: "Protegidas",
       pillUnassigned: "Sin carpeta",
       autoRulesPrefix: "Auto-reglas",
+      editFolderTitle: (name) => `Editar carpeta "${name}"`,
       delFolderTitle: (name) => `Eliminar carpeta "${name}" (no borra las conversaciones)`,
+      emptyStateText: "Sin conversaciones en esta vista",
+      emptyStateResetBtn: "Ver todas las conversaciones",
       loadAllBtn: "Cargar",
       stopLoadBtn: "Detener",
       loadAllTitle: "Bajar automáticamente por la barra lateral para cargar todo tu historial",
@@ -426,11 +494,13 @@
       removeFromFolder: "Quitar de carpeta",
       createNewFolderMenu: "Nueva carpeta...",
       modalNewFolderTitle: "Nueva Carpeta Inteligente",
+      modalEditFolderTitle: "Editar Carpeta Inteligente",
       modalNewFolderDesc: "Elige un nombre, un color y palabras clave opcionales para auto-clasificar tus chats:",
       modalFolderNamePlaceholder: "Nombre de carpeta (Ej. Trabajo, Finanzas, Inglés...)",
       modalKeywordsPlaceholder: "Palabras clave separadas por coma (Ej. excel, factura, banco)",
       cancel: "Cancelar",
       createFolderConfirm: "Crear Carpeta",
+      saveFolderConfirm: "Guardar Cambios",
       confirmDeleteTitle: (n) => `¿Eliminar ${n} conversación${n > 1 ? "es" : ""}?`,
       confirmDeleteDesc: (n, skipped) => `Se borrarán permanentemente ${n} conversación${n > 1 ? "es" : ""} de tu historial de ${P.name}.` + (skipped > 0 ? `
 (🔒 Se omitirán ${skipped} conversación(es) protegida(s) con candado).` : ""),
@@ -465,8 +535,16 @@
       promptTitlePlaceholder: "Título corto (Ej. Revisor Senior de Código)",
       promptBodyPlaceholder: "Escribe las instrucciones completas del prompt...",
       addPromptBtn: "Guardar Prompt",
+      updatePromptBtn: "Actualizar Prompt",
       insertPromptBtn: "Insertar",
       deletePromptTitle: "Eliminar prompt",
+      copyPromptTitle: "Copiar al portapapeles",
+      editPromptTitle: "Editar prompt",
+      cmdSearchPlaceholder: "Buscar prompt por título o instrucción...",
+      cmdNewBtn: "Nuevo",
+      promptCategoryPlaceholder: "Categoría opcional (Ej. Código, Redacción, SQL)",
+      promptsNoResults: (q) => `Sin resultados para "${q}"`,
+      cmdFooterHint: "↵ Insertar · 📋 Copiar · ✎ Editar · Esc Cerrar",
       promptsEmpty: "Aún no tienes prompts guardados. Crea uno abajo para reutilizarlo en 1 clic.",
       searchClearTitle: "Limpiar búsqueda",
       toastPromptInserted: "⚡ Prompt insertado en el chat.",
@@ -513,7 +591,10 @@
       pillProtected: "Protected",
       pillUnassigned: "Unassigned",
       autoRulesPrefix: "Auto-rules",
+      editFolderTitle: (name) => `Edit folder "${name}"`,
       delFolderTitle: (name) => `Delete folder "${name}" (does not delete chats)`,
+      emptyStateText: "No conversations match this view",
+      emptyStateResetBtn: "Show all conversations",
       loadAllBtn: "Load",
       stopLoadBtn: "Stop",
       loadAllTitle: "Auto-scroll the sidebar to load all your older chat history",
@@ -536,11 +617,13 @@
       removeFromFolder: "Remove from folder",
       createNewFolderMenu: "New folder...",
       modalNewFolderTitle: "New Smart Folder",
+      modalEditFolderTitle: "Edit Smart Folder",
       modalNewFolderDesc: "Choose a name, color, and optional keywords to auto-classify your chats:",
       modalFolderNamePlaceholder: "Folder name (e.g., Work, Finance, Coding...)",
       modalKeywordsPlaceholder: "Comma-separated keywords (e.g., python, invoice, bug)",
       cancel: "Cancel",
       createFolderConfirm: "Create Folder",
+      saveFolderConfirm: "Save Changes",
       confirmDeleteTitle: (n) => `Delete ${n} conversation${n > 1 ? "s" : ""}?`,
       confirmDeleteDesc: (n, skipped) => `You are about to permanently delete ${n} conversation${n > 1 ? "s" : ""} from your ${P.name} history.` + (skipped > 0 ? `
 (🔒 ${skipped} locked conversation(s) will be safely skipped).` : ""),
@@ -575,8 +658,16 @@
       promptTitlePlaceholder: "Short title (e.g., Senior Code Reviewer)",
       promptBodyPlaceholder: "Write the full prompt instructions...",
       addPromptBtn: "Save Prompt",
+      updatePromptBtn: "Update Prompt",
       insertPromptBtn: "Insert",
       deletePromptTitle: "Delete prompt",
+      copyPromptTitle: "Copy to clipboard",
+      editPromptTitle: "Edit prompt",
+      cmdSearchPlaceholder: "Search prompts by title or instruction...",
+      cmdNewBtn: "New",
+      promptCategoryPlaceholder: "Optional tag (e.g. Coding, Writing, SQL)",
+      promptsNoResults: (q) => `No prompts match "${q}"`,
+      cmdFooterHint: "↵ Insert · 📋 Copy · ✎ Edit · Esc Close",
       promptsEmpty: "No saved prompts yet. Create one below to insert it with 1 click.",
       searchClearTitle: "Clear search",
       toastPromptInserted: "⚡ Prompt inserted into chat.",
@@ -1159,6 +1250,11 @@
       const isProtected = !!state.folderState.protectedIds[id];
       row.classList.toggle("gcm-has-lock", isProtected);
       row.classList.toggle("gcm-has-badge", !!folder);
+      if (folder) {
+        row.style.setProperty("--gcm-row-folder-color", folder.color);
+      } else {
+        row.style.removeProperty("--gcm-row-folder-color");
+      }
       let lockEl = row.querySelector(".gcm-lock-icon");
       if (isProtected) {
         if (!lockEl) {
@@ -1194,18 +1290,14 @@
         if (badge.dataset.sig !== badgeSig) {
           badge.dataset.sig = badgeSig;
           badge.textContent = "";
+          badge.style.setProperty("--gcm-badge-color", folder.color);
           const dot = document.createElement("span");
           dot.className = "gcm-badge-dot";
-          dot.style.backgroundColor = folder.color;
-          dot.style.boxShadow = `0 0 6px ${folder.color}`;
           const txt = document.createElement("span");
           txt.className = "gcm-badge-text";
           txt.textContent = folder.name;
           badge.appendChild(dot);
           badge.appendChild(txt);
-          badge.style.background = `linear-gradient(135deg, ${folder.color}44 0%, var(--gcm-badge-bg) 90%)`;
-          badge.style.color = "var(--gcm-text-primary)";
-          badge.style.borderColor = `${folder.color}aa`;
         }
       } else if (badge) {
         badge.remove();
@@ -1278,13 +1370,14 @@
   }
 
   // src/dialogs.js
-  function openCreateFolderModal(onCreatedCallback = null) {
+  function openCreateFolderModal(onCreatedCallback = null, existingFolder = null) {
     const existing = document.getElementById("gcm-modal-overlay");
     if (existing) {
       existing._gcmClose?.(false);
       existing.remove();
     }
-    let chosenColor = PRESET_COLORS[state.folderState.folders.length % PRESET_COLORS.length];
+    const isEdit = Boolean(existingFolder);
+    let chosenColor = isEdit ? existingFolder.color || PRESET_COLORS[0] : PRESET_COLORS[state.folderState.folders.length % PRESET_COLORS.length];
     const overlay = document.createElement("div");
     overlay.id = "gcm-modal-overlay";
     const card = document.createElement("div");
@@ -1298,7 +1391,7 @@
     overlay._gcmClose = closeModal;
     const title = document.createElement("div");
     title.className = "gcm-modal-title";
-    title.textContent = t().modalNewFolderTitle;
+    title.textContent = isEdit ? t().modalEditFolderTitle : t().modalNewFolderTitle;
     const desc = document.createElement("div");
     desc.className = "gcm-modal-desc";
     desc.textContent = t().modalNewFolderDesc;
@@ -1306,10 +1399,16 @@
     inputName.type = "text";
     inputName.className = "gcm-modal-input";
     inputName.placeholder = t().modalFolderNamePlaceholder;
+    if (isEdit) {
+      inputName.value = existingFolder.name || "";
+    }
     const inputKeywords = document.createElement("input");
     inputKeywords.type = "text";
     inputKeywords.className = "gcm-modal-input";
     inputKeywords.placeholder = t().modalKeywordsPlaceholder;
+    if (isEdit && Array.isArray(existingFolder.keywords)) {
+      inputKeywords.value = existingFolder.keywords.join(", ");
+    }
     const colorRow = document.createElement("div");
     colorRow.className = "gcm-color-picker-row";
     PRESET_COLORS.forEach((col) => {
@@ -1338,7 +1437,7 @@
     cancelBtn.addEventListener("click", closeModal);
     const saveBtn = document.createElement("button");
     saveBtn.className = "gcm-btn gcm-btn-stop";
-    saveBtn.textContent = t().createFolderConfirm;
+    saveBtn.textContent = isEdit ? t().saveFolderConfirm : t().createFolderConfirm;
     const handleSave = () => {
       const name = inputName.value.trim();
       if (!name) {
@@ -1346,19 +1445,30 @@
         return;
       }
       const keywords = inputKeywords.value.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean);
-      const newFolder = {
-        id: "f_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
-        name,
-        color: chosenColor,
-        keywords
-      };
-      state.folderState.folders.push(newFolder);
+      let savedFolder;
+      if (isEdit) {
+        const target = state.folderState.folders.find((f) => f.id === existingFolder.id);
+        if (target) {
+          target.name = name;
+          target.color = chosenColor;
+          target.keywords = keywords;
+          savedFolder = target;
+        }
+      } else {
+        savedFolder = {
+          id: "f_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
+          name,
+          color: chosenColor,
+          keywords
+        };
+        state.folderState.folders.push(savedFolder);
+      }
       autoClassifiedVisited.clear();
       saveFolderData(state.folderState);
       closeModal();
       refreshUI();
-      if (typeof onCreatedCallback === "function") {
-        onCreatedCallback(newFolder);
+      if (typeof onCreatedCallback === "function" && savedFolder) {
+        onCreatedCallback(savedFolder);
       }
     };
     saveBtn.addEventListener("click", handleSave);
@@ -1780,10 +1890,13 @@ ${text}` : text;
     if (!Array.isArray(state.folderState.prompts)) {
       state.folderState.prompts = t().defaultPrompts.map((p) => ({ ...p }));
     }
+    const isEs = state.folderState.lang === "es";
+    let filterQuery = "";
+    let editingPromptId = null;
     const overlay = document.createElement("div");
     overlay.id = "gcm-modal-overlay";
     const card = document.createElement("div");
-    card.className = "gcm-modal-card gcm-prompts-modal-card";
+    card.className = "gcm-modal-card gcm-prompts-modal-card gcm-cmd-palette";
     card.setAttribute("role", "dialog");
     card.setAttribute("aria-modal", "true");
     const closeModal = () => {
@@ -1791,48 +1904,157 @@ ${text}` : text;
       overlay.remove();
     };
     overlay._gcmClose = closeModal;
-    const title = document.createElement("div");
-    title.className = "gcm-modal-title gcm-modal-title-icon";
-    setButtonIconText(title, ICONS.zap, t().modalPromptsTitle);
-    const desc = document.createElement("div");
-    desc.className = "gcm-modal-desc";
-    desc.textContent = t().modalPromptsDesc;
+    const cmdHeader = document.createElement("div");
+    cmdHeader.className = "gcm-cmd-header";
+    const searchIcon = createIconElement(ICONS.search);
+    searchIcon.classList.add("gcm-cmd-search-icon");
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.className = "gcm-cmd-search-input";
+    searchInput.placeholder = t().cmdSearchPlaceholder;
+    const toggleFormBtn = document.createElement("button");
+    toggleFormBtn.type = "button";
+    toggleFormBtn.className = "gcm-btn gcm-btn-folder gcm-cmd-new-btn";
+    setButtonIconText(toggleFormBtn, ICONS.plus, t().cmdNewBtn);
+    cmdHeader.appendChild(searchIcon);
+    cmdHeader.appendChild(searchInput);
+    cmdHeader.appendChild(toggleFormBtn);
+    const formBox = document.createElement("div");
+    formBox.className = "gcm-prompt-form gcm-cmd-drawer";
+    formBox.style.display = "none";
+    const inputTitle = document.createElement("input");
+    inputTitle.type = "text";
+    inputTitle.className = "gcm-modal-input";
+    inputTitle.placeholder = t().promptTitlePlaceholder;
+    const inputCategory = document.createElement("input");
+    inputCategory.type = "text";
+    inputCategory.className = "gcm-modal-input";
+    inputCategory.placeholder = t().promptCategoryPlaceholder;
+    const inputBody = document.createElement("textarea");
+    inputBody.className = "gcm-modal-input gcm-modal-textarea gcm-mono-textarea";
+    inputBody.placeholder = t().promptBodyPlaceholder;
+    inputBody.rows = 3;
+    const formActions = document.createElement("div");
+    formActions.className = "gcm-cmd-drawer-actions";
+    const cancelEditBtn = document.createElement("button");
+    cancelEditBtn.type = "button";
+    cancelEditBtn.className = "gcm-btn gcm-btn-cancel";
+    cancelEditBtn.textContent = t().cancel;
+    const savePromptBtn = document.createElement("button");
+    savePromptBtn.type = "button";
+    savePromptBtn.className = "gcm-btn gcm-btn-stop gcm-add-prompt-submit";
+    setButtonIconText(savePromptBtn, ICONS.plus, t().addPromptBtn);
+    formActions.appendChild(cancelEditBtn);
+    formActions.appendChild(savePromptBtn);
+    formBox.appendChild(inputTitle);
+    formBox.appendChild(inputCategory);
+    formBox.appendChild(inputBody);
+    formBox.appendChild(formActions);
+    const openDrawer = (promptToEdit = null) => {
+      editingPromptId = promptToEdit ? promptToEdit.id : null;
+      inputTitle.value = promptToEdit ? promptToEdit.title : "";
+      inputCategory.value = promptToEdit?.category || "";
+      inputBody.value = promptToEdit ? promptToEdit.content.trim() : "";
+      setButtonIconText(
+        savePromptBtn,
+        promptToEdit ? ICONS.editPencil : ICONS.plus,
+        promptToEdit ? t().updatePromptBtn : t().addPromptBtn
+      );
+      formBox.style.display = "flex";
+      inputTitle.focus();
+    };
+    const closeDrawer = () => {
+      editingPromptId = null;
+      inputTitle.value = "";
+      inputCategory.value = "";
+      inputBody.value = "";
+      formBox.style.display = "none";
+    };
+    toggleFormBtn.addEventListener("click", () => {
+      if (formBox.style.display === "none") openDrawer(null);
+      else closeDrawer();
+    });
+    cancelEditBtn.addEventListener("click", closeDrawer);
     const listContainer = document.createElement("div");
     listContainer.className = "gcm-prompts-list";
+    const inferCategory = (p) => {
+      if (p.category) return p.category;
+      const lower = (p.title + " " + p.content).toLowerCase();
+      if (/código|code|bug|script|sql|react|python/.test(lower)) return isEs ? "Código" : "Code";
+      if (/resumen|summary|ejecutivo|bullet/.test(lower)) return isEs ? "Síntesis" : "Summary";
+      if (/traduc|translat|idioma|english/.test(lower)) return isEs ? "Idiomas" : "Language";
+      return "General";
+    };
     const renderPromptsList = () => {
       listContainer.textContent = "";
-      if (state.folderState.prompts.length === 0) {
+      const q = filterQuery.trim().toLowerCase();
+      const filtered = state.folderState.prompts.filter(
+        (p) => !q || p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q) || (p.category || "").toLowerCase().includes(q)
+      );
+      if (filtered.length === 0) {
         const empty = document.createElement("div");
         empty.className = "gcm-prompts-empty";
-        empty.textContent = t().promptsEmpty;
+        empty.textContent = q ? t().promptsNoResults(filterQuery) : t().promptsEmpty;
         listContainer.appendChild(empty);
         return;
       }
-      state.folderState.prompts.forEach((p) => {
+      filtered.forEach((p, idx) => {
         const item = document.createElement("div");
-        item.className = "gcm-prompt-item";
+        item.className = "gcm-prompt-item" + (idx === 0 && q ? " gcm-prompt-item-active" : "");
+        item.setAttribute("tabindex", "0");
         const info = document.createElement("div");
         info.className = "gcm-prompt-info";
-        const itemTitle = document.createElement("div");
+        const titleRow = document.createElement("div");
+        titleRow.className = "gcm-prompt-title-row";
+        const itemTitle = document.createElement("span");
         itemTitle.className = "gcm-prompt-item-title";
         itemTitle.textContent = p.title;
+        const tag = document.createElement("span");
+        tag.className = "gcm-prompt-tag";
+        tag.textContent = inferCategory(p);
+        titleRow.appendChild(itemTitle);
+        titleRow.appendChild(tag);
         const itemPreview = document.createElement("div");
         itemPreview.className = "gcm-prompt-item-preview";
-        itemPreview.textContent = p.content.trim().slice(0, 110) + (p.content.length > 110 ? "…" : "");
-        info.appendChild(itemTitle);
+        itemPreview.textContent = p.content.trim().slice(0, 140) + (p.content.length > 140 ? "…" : "");
+        info.appendChild(titleRow);
         info.appendChild(itemPreview);
         const itemActions = document.createElement("div");
         itemActions.className = "gcm-prompt-item-actions";
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "gcm-prompt-icon-btn";
+        copyBtn.appendChild(createIconElement(ICONS.copy));
+        copyBtn.title = t().copyPromptTitle;
+        copyBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          try {
+            navigator.clipboard?.writeText(p.content.trim());
+          } catch (_) {
+          }
+          updateStatusToast(t().toastPromptCopied, null, null, 2400);
+        });
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "gcm-prompt-icon-btn";
+        editBtn.appendChild(createIconElement(ICONS.editPencil));
+        editBtn.title = t().editPromptTitle;
+        editBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openDrawer(p);
+        });
         const useBtn = document.createElement("button");
+        useBtn.type = "button";
         useBtn.className = "gcm-btn gcm-btn-stop gcm-prompt-use-btn";
-        useBtn.textContent = t().insertPromptBtn;
+        useBtn.textContent = `${t().insertPromptBtn} ↵`;
         useBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           closeModal();
           insertPromptIntoChat(p.content);
         });
         const delBtn = document.createElement("button");
-        delBtn.className = "gcm-prompt-del-btn";
+        delBtn.type = "button";
+        delBtn.className = "gcm-prompt-icon-btn gcm-prompt-del-btn";
         delBtn.appendChild(createIconElement(ICONS.close));
         delBtn.title = t().deletePromptTitle;
         delBtn.addEventListener("click", (e) => {
@@ -1841,58 +2063,70 @@ ${text}` : text;
           saveFolderData(state.folderState);
           renderPromptsList();
         });
+        itemActions.appendChild(copyBtn);
+        itemActions.appendChild(editBtn);
         itemActions.appendChild(useBtn);
         itemActions.appendChild(delBtn);
         item.addEventListener("click", () => {
           closeModal();
           insertPromptIntoChat(p.content);
         });
+        item.addEventListener("keydown", (e) => {
+          if (e.target === item && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            closeModal();
+            insertPromptIntoChat(p.content);
+          }
+        });
         item.appendChild(info);
         item.appendChild(itemActions);
         listContainer.appendChild(item);
       });
     };
-    renderPromptsList();
-    const formBox = document.createElement("div");
-    formBox.className = "gcm-prompt-form";
-    const inputTitle = document.createElement("input");
-    inputTitle.type = "text";
-    inputTitle.className = "gcm-modal-input";
-    inputTitle.placeholder = t().promptTitlePlaceholder;
-    const inputBody = document.createElement("textarea");
-    inputBody.className = "gcm-modal-input gcm-modal-textarea";
-    inputBody.placeholder = t().promptBodyPlaceholder;
-    inputBody.rows = 3;
-    const addPromptBtn = document.createElement("button");
-    addPromptBtn.className = "gcm-btn gcm-btn-folder gcm-add-prompt-submit";
-    setButtonIconText(addPromptBtn, ICONS.plus, t().addPromptBtn);
-    addPromptBtn.addEventListener("click", () => {
+    searchInput.addEventListener("input", (e) => {
+      filterQuery = e.target.value;
+      renderPromptsList();
+    });
+    savePromptBtn.addEventListener("click", () => {
       const newTitle = inputTitle.value.trim();
+      const newCat = inputCategory.value.trim();
       const newBody = inputBody.value.trim();
       if (!newTitle || !newBody) {
         (!newTitle ? inputTitle : inputBody).focus();
         return;
       }
-      state.folderState.prompts.push({
-        id: "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
-        title: newTitle,
-        content: newBody + "\n\n"
-      });
+      if (editingPromptId) {
+        const target = state.folderState.prompts.find((p) => p.id === editingPromptId);
+        if (target) {
+          target.title = newTitle;
+          target.category = newCat || void 0;
+          target.content = newBody + "\n\n";
+        }
+      } else {
+        state.folderState.prompts.push({
+          id: "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
+          title: newTitle,
+          category: newCat || void 0,
+          content: newBody + "\n\n"
+        });
+      }
       saveFolderData(state.folderState);
-      inputTitle.value = "";
-      inputBody.value = "";
+      closeDrawer();
       renderPromptsList();
     });
-    formBox.appendChild(inputTitle);
-    formBox.appendChild(inputBody);
-    formBox.appendChild(addPromptBtn);
-    const actions = document.createElement("div");
-    actions.className = "gcm-modal-actions";
+    renderPromptsList();
+    const cmdFooter = document.createElement("div");
+    cmdFooter.className = "gcm-cmd-footer";
+    const footerHint = document.createElement("span");
+    footerHint.className = "gcm-cmd-footer-hint";
+    footerHint.textContent = t().cmdFooterHint;
     const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
     closeBtn.className = "gcm-btn gcm-btn-cancel";
     closeBtn.textContent = t().cancel;
     closeBtn.addEventListener("click", closeModal);
-    actions.appendChild(closeBtn);
+    cmdFooter.appendChild(footerHint);
+    cmdFooter.appendChild(closeBtn);
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closeModal();
     });
@@ -1902,13 +2136,13 @@ ${text}` : text;
       }
     }
     document.addEventListener("keydown", onEsc);
-    card.appendChild(title);
-    card.appendChild(desc);
-    card.appendChild(listContainer);
+    card.appendChild(cmdHeader);
     card.appendChild(formBox);
-    card.appendChild(actions);
+    card.appendChild(listContainer);
+    card.appendChild(cmdFooter);
     overlay.appendChild(card);
     document.body.appendChild(overlay);
+    setTimeout(() => searchInput.focus(), 40);
   }
 
   // src/deletion.js
@@ -2776,10 +3010,26 @@ ${text}
   }
 
   // src/toolbar.js
+  function appendButtonWithKbd(btn, iconBuilder, labelText, kbdText = null) {
+    setButtonIconText(btn, iconBuilder, labelText);
+    if (kbdText) {
+      const kbd = document.createElement("kbd");
+      kbd.className = "gcm-kbd";
+      kbd.textContent = kbdText;
+      btn.appendChild(kbd);
+    }
+  }
+  function createToolbarSeparator() {
+    const sep = document.createElement("span");
+    sep.className = "gcm-toolbar-sep";
+    sep.setAttribute("aria-hidden", "true");
+    return sep;
+  }
   function createToolbar() {
     if (document.getElementById("gcm-toolbar")) return;
     const toolbar = document.createElement("div");
     toolbar.id = "gcm-toolbar";
+    toolbar.dataset.gcmCount = "0";
     const headWrap = document.createElement("div");
     headWrap.className = "gcm-toolbar-head";
     const collapseBtn = document.createElement("button");
@@ -2815,18 +3065,37 @@ ${text}
     selectAllText.textContent = t().selectAll;
     selectAllWrap.appendChild(selectAllCb);
     selectAllWrap.appendChild(selectAllText);
+    const countBadgeWrap = document.createElement("div");
+    countBadgeWrap.id = "gcm-selection-pill";
+    countBadgeWrap.className = "gcm-selection-pill";
+    const countNum = document.createElement("span");
+    countNum.id = "gcm-selection-count";
+    countNum.className = "gcm-selection-count-text";
+    countNum.textContent = state.folderState.lang === "es" ? "0 seleccionados" : "0 selected";
+    const clearSelBtn = document.createElement("button");
+    clearSelBtn.type = "button";
+    clearSelBtn.id = "gcm-clear-selection-btn";
+    clearSelBtn.className = "gcm-selection-clear-btn";
+    clearSelBtn.title = state.folderState.lang === "es" ? "Limpiar selección (Esc)" : "Clear selection (Esc)";
+    clearSelBtn.appendChild(createIconElement(ICONS.close));
+    clearSelBtn.addEventListener("click", () => toggleSelectAll(false));
+    countBadgeWrap.appendChild(countNum);
+    countBadgeWrap.appendChild(clearSelBtn);
     const folderBtn = document.createElement("button");
     folderBtn.id = "gcm-folder-btn";
     folderBtn.className = "gcm-btn gcm-btn-folder";
     folderBtn.disabled = true;
-    setButtonIconText(folderBtn, ICONS.folder, t().folderBtn(0));
+    folderBtn.dataset.label = t().folderBtn(0);
+    folderBtn.dataset.lang = state.folderState.lang;
+    appendButtonWithKbd(folderBtn, ICONS.folder, state.folderState.lang === "es" ? "Carpeta" : "Folder", "M");
     folderBtn.title = t().folderBtnTitle;
     folderBtn.addEventListener("click", () => toggleMoveToFolderPopover(folderBtn));
     const protectBtn = document.createElement("button");
     protectBtn.id = "gcm-protect-btn";
     protectBtn.className = "gcm-btn gcm-btn-neutral";
     protectBtn.disabled = true;
-    setButtonIconText(protectBtn, ICONS.lock, t().protectBtn);
+    protectBtn.dataset.lang = state.folderState.lang;
+    appendButtonWithKbd(protectBtn, ICONS.lock, t().protectBtn, "L");
     protectBtn.title = t().protectBtnTitle;
     protectBtn.addEventListener("click", toggleProtectSelected);
     const exportBtn = document.createElement("button");
@@ -2839,7 +3108,9 @@ ${text}
     deleteBtn.id = "gcm-delete-btn";
     deleteBtn.className = "gcm-btn gcm-btn-danger";
     deleteBtn.disabled = true;
-    setButtonIconText(deleteBtn, ICONS.trash, t().deleteBtn(0));
+    deleteBtn.dataset.label = t().deleteBtn(0);
+    deleteBtn.dataset.lang = state.folderState.lang;
+    appendButtonWithKbd(deleteBtn, ICONS.trash, state.folderState.lang === "es" ? "Borrar" : "Delete", "⌫");
     deleteBtn.addEventListener("click", deleteSelectedChats);
     const stopBtn = document.createElement("button");
     stopBtn.id = "gcm-stop-btn";
@@ -2849,9 +3120,12 @@ ${text}
     stopBtn.addEventListener("click", stopDeletion);
     toolbar.appendChild(headWrap);
     toolbar.appendChild(selectAllWrap);
+    toolbar.appendChild(countBadgeWrap);
+    toolbar.appendChild(createToolbarSeparator());
     toolbar.appendChild(folderBtn);
     toolbar.appendChild(protectBtn);
     toolbar.appendChild(exportBtn);
+    toolbar.appendChild(createToolbarSeparator());
     toolbar.appendChild(deleteBtn);
     toolbar.appendChild(stopBtn);
     enableToolbarDrag(toolbar);
@@ -2975,6 +3249,9 @@ ${text}
     });
   }
   function updateToolbarState() {
+    const toolbar = document.getElementById("gcm-toolbar");
+    const countNum = document.getElementById("gcm-selection-count");
+    const clearSelBtn = document.getElementById("gcm-clear-selection-btn");
     const folderBtn = document.getElementById("gcm-folder-btn");
     const protectBtn = document.getElementById("gcm-protect-btn");
     const exportBtn = document.getElementById("gcm-export-btn");
@@ -2982,6 +3259,19 @@ ${text}
     const stopBtn = document.getElementById("gcm-stop-btn");
     const selectAllCb = document.getElementById("gcm-select-all");
     if (!deleteBtn || !stopBtn || !folderBtn) return;
+    const count = selectedMap.size;
+    const isEs = state.folderState.lang === "es";
+    document.documentElement.toggleAttribute("data-gcm-selection-mode", count > 0);
+    if (toolbar) {
+      toolbar.dataset.gcmCount = String(count);
+      toolbar.classList.toggle("gcm-has-selection", count > 0 || state.deletionInProgress);
+    }
+    if (countNum) {
+      countNum.textContent = isEs ? `${count} seleccionado${count === 1 ? "" : "s"}` : `${count} selected`;
+    }
+    if (clearSelBtn) {
+      clearSelBtn.title = isEs ? "Limpiar selección (Esc)" : "Clear selection (Esc)";
+    }
     if (state.deletionInProgress) {
       folderBtn.style.display = "none";
       if (protectBtn) protectBtn.style.display = "none";
@@ -3011,21 +3301,26 @@ ${text}
         selectAllCb.classList.toggle("gcm-checked", allChecked);
         selectAllCb.indeterminate = visibleChecked > 0 && !allChecked;
       }
-      const count = selectedMap.size;
       folderBtn.disabled = count === 0;
       const fText = t().folderBtn(count);
-      if (folderBtn.dataset.label !== fText) {
+      if (folderBtn.dataset.label !== fText || folderBtn.dataset.lang !== state.folderState.lang) {
         folderBtn.dataset.label = fText;
-        setButtonIconText(folderBtn, ICONS.folder, fText);
+        folderBtn.dataset.lang = state.folderState.lang;
+        appendButtonWithKbd(folderBtn, ICONS.folder, isEs ? "Carpeta" : "Folder", "M");
       }
       if (protectBtn) {
         protectBtn.disabled = count === 0;
+        if (protectBtn.dataset.lang !== state.folderState.lang) {
+          protectBtn.dataset.lang = state.folderState.lang;
+          appendButtonWithKbd(protectBtn, ICONS.lock, t().protectBtn, "L");
+        }
       }
       deleteBtn.disabled = count === 0;
       const dText = t().deleteBtn(count);
-      if (deleteBtn.dataset.label !== dText) {
+      if (deleteBtn.dataset.label !== dText || deleteBtn.dataset.lang !== state.folderState.lang) {
         deleteBtn.dataset.label = dText;
-        setButtonIconText(deleteBtn, ICONS.trash, dText);
+        deleteBtn.dataset.lang = state.folderState.lang;
+        appendButtonWithKbd(deleteBtn, ICONS.trash, isEs ? "Borrar" : "Delete", "⌫");
       }
     }
   }
@@ -3083,6 +3378,7 @@ ${text}
     }
     const pillsContainer = document.getElementById("gcm-pills-container");
     if (!pillsContainer) return;
+    updateEmptyState(items, pillsContainer);
     const signature = JSON.stringify({
       lang: state.folderState.lang,
       folders: state.folderState.folders,
@@ -3430,14 +3726,54 @@ ${text}
     box.appendChild(header);
     box.appendChild(body);
   }
+  function updateEmptyState(items, pillsContainer) {
+    let emptyBox = document.getElementById("gcm-empty-state");
+    const visibleRowsCount = items.filter((it) => !it.row.classList.contains("gcm-hidden-by-filter")).length;
+    const isFiltered = state.activeFolderFilter !== "ALL" || state.searchQuery.trim().length > 0;
+    if (items.length > 0 && visibleRowsCount === 0 && isFiltered) {
+      if (!emptyBox) {
+        emptyBox = document.createElement("div");
+        emptyBox.id = "gcm-empty-state";
+        emptyBox.className = "gcm-empty-state";
+        const ill = createIconElement(ICONS.emptyFolderSearch);
+        const msg = document.createElement("div");
+        msg.className = "gcm-empty-state-text";
+        msg.id = "gcm-empty-state-text";
+        const resetBtn = document.createElement("button");
+        resetBtn.type = "button";
+        resetBtn.className = "gcm-empty-reset-btn";
+        resetBtn.id = "gcm-empty-reset-btn";
+        resetBtn.addEventListener("click", () => {
+          state.activeFolderFilter = "ALL";
+          state.searchQuery = "";
+          const input = document.querySelector("#gcm-folders-box .gcm-search-input");
+          if (input) input.value = "";
+          saveView();
+          refreshUI();
+        });
+        emptyBox.appendChild(ill);
+        emptyBox.appendChild(msg);
+        emptyBox.appendChild(resetBtn);
+        pillsContainer.insertAdjacentElement("afterend", emptyBox);
+      }
+      const textEl = document.getElementById("gcm-empty-state-text");
+      const resetEl = document.getElementById("gcm-empty-reset-btn");
+      if (textEl) textEl.textContent = t().emptyStateText;
+      if (resetEl) resetEl.textContent = t().emptyStateResetBtn;
+      emptyBox.style.display = "flex";
+    } else if (emptyBox) {
+      emptyBox.style.display = "none";
+    }
+  }
   function createFolderPill({ id, name, color, count, deletable, keywords }) {
     const pill = document.createElement("div");
-    pill.className = "gcm-folder-pill" + (state.activeFolderFilter === id ? " active" : "");
+    const hasRules = Array.isArray(keywords) && keywords.length > 0;
+    pill.className = "gcm-folder-pill" + (state.activeFolderFilter === id ? " active" : "") + (hasRules ? " gcm-pill-has-rules" : "");
     pill.setAttribute("role", "button");
     pill.setAttribute("tabindex", "0");
     pill.setAttribute("aria-pressed", String(state.activeFolderFilter === id));
-    if (Array.isArray(keywords) && keywords.length > 0) {
-      pill.title = `${t().autoRulesPrefix}: ${keywords.join(", ")}`;
+    if (hasRules) {
+      pill.title = `${t().autoRulesPrefix} (${keywords.length}): ${keywords.join(", ")}`;
     }
     if (id === "PROTECTED") {
       pill.appendChild(createIconElement(ICONS.lockSmall));
@@ -3449,13 +3785,41 @@ ${text}
       pill.appendChild(dot);
     }
     const label = document.createElement("span");
+    label.className = "gcm-folder-label";
     label.textContent = name;
     pill.appendChild(label);
+    if (hasRules) {
+      const ruleTag = document.createElement("span");
+      ruleTag.className = "gcm-folder-autorule";
+      ruleTag.appendChild(createIconElement(ICONS.sparkle));
+      pill.appendChild(ruleTag);
+    }
     const badgeCount = document.createElement("span");
     badgeCount.className = "gcm-folder-count";
     badgeCount.textContent = String(count);
     pill.appendChild(badgeCount);
     if (deletable) {
+      const actionsWrap = document.createElement("span");
+      actionsWrap.className = "gcm-folder-pill-actions";
+      const editBtn = document.createElement("span");
+      editBtn.className = "gcm-folder-edit";
+      editBtn.appendChild(createIconElement(ICONS.editPencil));
+      editBtn.title = t().editFolderTitle(name);
+      editBtn.setAttribute("role", "button");
+      editBtn.setAttribute("tabindex", "0");
+      editBtn.setAttribute("aria-label", t().editFolderTitle(name));
+      const triggerEdit = (e) => {
+        e.stopPropagation();
+        const targetFolder = state.folderState.folders.find((f) => f.id === id);
+        if (targetFolder) openCreateFolderModal(null, targetFolder);
+      };
+      editBtn.addEventListener("click", triggerEdit);
+      editBtn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          triggerEdit(e);
+        }
+      });
       const del = document.createElement("span");
       del.className = "gcm-folder-del";
       del.textContent = "×";
@@ -3474,7 +3838,9 @@ ${text}
           deleteFolderById(id);
         }
       });
-      pill.appendChild(del);
+      actionsWrap.appendChild(editBtn);
+      actionsWrap.appendChild(del);
+      pill.appendChild(actionsWrap);
     }
     pill.addEventListener("click", () => {
       state.autoSelectAllMode = false;

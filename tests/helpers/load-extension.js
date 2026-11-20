@@ -61,7 +61,7 @@ export function loadExtension(contentJsPath, platform = 'gemini', { storage = {}
   });
   const { window } = dom;
   Object.entries(storage).forEach(([k, v]) => window.localStorage.setItem(k, v));
-  window.chrome = createChromeMock({ initialSync, version: '3.5.7' });
+  window.chrome = createChromeMock({ initialSync, version: '3.6.0' });
   Object.defineProperty(window.navigator, 'language', { value: 'es-CL', configurable: true });
   window.URL.createObjectURL = () => 'blob:test';
   window.URL.revokeObjectURL = () => {};

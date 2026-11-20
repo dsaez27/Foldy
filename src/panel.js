@@ -72,6 +72,8 @@ export function injectSidebarFoldersPanel(items) {
   const pillsContainer = document.getElementById('gcm-pills-container');
   if (!pillsContainer) return;
 
+  updateEmptyState(items, pillsContainer);
+
   const signature = JSON.stringify({
     lang: state.folderState.lang,
     folders: state.folderState.folders,
@@ -479,14 +481,62 @@ function buildFoldersPanelDOM(box) {
   box.appendChild(body);
 }
 
+function updateEmptyState(items, pillsContainer) {
+  let emptyBox = document.getElementById('gcm-empty-state');
+  const visibleRowsCount = items.filter((it) => !it.row.classList.contains('gcm-hidden-by-filter')).length;
+  const isFiltered = state.activeFolderFilter !== 'ALL' || state.searchQuery.trim().length > 0;
+
+  if (items.length > 0 && visibleRowsCount === 0 && isFiltered) {
+    if (!emptyBox) {
+      emptyBox = document.createElement('div');
+      emptyBox.id = 'gcm-empty-state';
+      emptyBox.className = 'gcm-empty-state';
+
+      const ill = createIconElement(ICONS.emptyFolderSearch);
+      const msg = document.createElement('div');
+      msg.className = 'gcm-empty-state-text';
+      msg.id = 'gcm-empty-state-text';
+
+      const resetBtn = document.createElement('button');
+      resetBtn.type = 'button';
+      resetBtn.className = 'gcm-empty-reset-btn';
+      resetBtn.id = 'gcm-empty-reset-btn';
+      resetBtn.addEventListener('click', () => {
+        state.activeFolderFilter = 'ALL';
+        state.searchQuery = '';
+        const input = document.querySelector('#gcm-folders-box .gcm-search-input');
+        if (input) input.value = '';
+        saveView();
+        refreshUI();
+      });
+
+      emptyBox.appendChild(ill);
+      emptyBox.appendChild(msg);
+      emptyBox.appendChild(resetBtn);
+      pillsContainer.insertAdjacentElement('afterend', emptyBox);
+    }
+    const textEl = document.getElementById('gcm-empty-state-text');
+    const resetEl = document.getElementById('gcm-empty-reset-btn');
+    if (textEl) textEl.textContent = t().emptyStateText;
+    if (resetEl) resetEl.textContent = t().emptyStateResetBtn;
+    emptyBox.style.display = 'flex';
+  } else if (emptyBox) {
+    emptyBox.style.display = 'none';
+  }
+}
+
 function createFolderPill({ id, name, color, count, deletable, keywords }) {
   const pill = document.createElement('div');
-  pill.className = 'gcm-folder-pill' + (state.activeFolderFilter === id ? ' active' : '');
+  const hasRules = Array.isArray(keywords) && keywords.length > 0;
+  pill.className =
+    'gcm-folder-pill' +
+    (state.activeFolderFilter === id ? ' active' : '') +
+    (hasRules ? ' gcm-pill-has-rules' : '');
   pill.setAttribute('role', 'button');
   pill.setAttribute('tabindex', '0');
   pill.setAttribute('aria-pressed', String(state.activeFolderFilter === id));
-  if (Array.isArray(keywords) && keywords.length > 0) {
-    pill.title = `${t().autoRulesPrefix}: ${keywords.join(', ')}`;
+  if (hasRules) {
+    pill.title = `${t().autoRulesPrefix} (${keywords.length}): ${keywords.join(', ')}`;
   }
 
   if (id === 'PROTECTED') {
@@ -500,8 +550,16 @@ function createFolderPill({ id, name, color, count, deletable, keywords }) {
   }
 
   const label = document.createElement('span');
+  label.className = 'gcm-folder-label';
   label.textContent = name;
   pill.appendChild(label);
+
+  if (hasRules) {
+    const ruleTag = document.createElement('span');
+    ruleTag.className = 'gcm-folder-autorule';
+    ruleTag.appendChild(createIconElement(ICONS.sparkle));
+    pill.appendChild(ruleTag);
+  }
 
   const badgeCount = document.createElement('span');
   badgeCount.className = 'gcm-folder-count';
@@ -509,6 +567,29 @@ function createFolderPill({ id, name, color, count, deletable, keywords }) {
   pill.appendChild(badgeCount);
 
   if (deletable) {
+    const actionsWrap = document.createElement('span');
+    actionsWrap.className = 'gcm-folder-pill-actions';
+
+    const editBtn = document.createElement('span');
+    editBtn.className = 'gcm-folder-edit';
+    editBtn.appendChild(createIconElement(ICONS.editPencil));
+    editBtn.title = t().editFolderTitle(name);
+    editBtn.setAttribute('role', 'button');
+    editBtn.setAttribute('tabindex', '0');
+    editBtn.setAttribute('aria-label', t().editFolderTitle(name));
+    const triggerEdit = (e) => {
+      e.stopPropagation();
+      const targetFolder = state.folderState.folders.find((f) => f.id === id);
+      if (targetFolder) openCreateFolderModal(null, targetFolder);
+    };
+    editBtn.addEventListener('click', triggerEdit);
+    editBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        triggerEdit(e);
+      }
+    });
+
     const del = document.createElement('span');
     del.className = 'gcm-folder-del';
     del.textContent = '×';
@@ -527,7 +608,10 @@ function createFolderPill({ id, name, color, count, deletable, keywords }) {
         deleteFolderById(id);
       }
     });
-    pill.appendChild(del);
+
+    actionsWrap.appendChild(editBtn);
+    actionsWrap.appendChild(del);
+    pill.appendChild(actionsWrap);
   }
 
   pill.addEventListener('click', () => {
