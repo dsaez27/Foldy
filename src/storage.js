@@ -1,5 +1,7 @@
 import { I18N, detectInitialLang } from './i18n.js';
-import { P } from './platform.js';
+import { P, THEME_STORAGE_KEY, applyThemePreset, normalizeThemePreset } from './platform.js';
+
+export const SHARED_CONFIG_KEY = 'gcm_shared_config_v1';
 
 // Copia segura de un mapa {idConversación: valor}: descarta arrays, claves peligrosas y valores inválidos.
 export function sanitizeMap(src, mapValue) {
@@ -90,6 +92,53 @@ export function loadFolderData() {
 }
 
 let lastSelfWrittenSyncJson = null;
+let lastSelfWrittenSharedJson = null;
+let lastSelfWrittenSharedContentJson = null;
+
+function getCurrentThemePreset() {
+  try {
+    const attr = typeof document !== 'undefined' ? document.documentElement?.getAttribute('data-gcm-style') : null;
+    if (attr) return normalizeThemePreset(attr);
+    if (typeof localStorage !== 'undefined') {
+      return normalizeThemePreset(localStorage.getItem(THEME_STORAGE_KEY));
+    }
+  } catch (_) {}
+  return 'adaptive';
+}
+
+function buildQuotaSafeSharedPayload(sharedPayload) {
+  const base = {
+    folders: Array.isArray(sharedPayload.folders) ? sharedPayload.folders : [],
+    prompts: Array.isArray(sharedPayload.prompts) ? sharedPayload.prompts : [],
+    lang: sharedPayload.lang === 'en' || sharedPayload.lang === 'es' ? sharedPayload.lang : 'es',
+    themePreset: normalizeThemePreset(sharedPayload.themePreset),
+    updatedAt: Number.isFinite(sharedPayload.updatedAt) ? sharedPayload.updatedAt : Date.now()
+  };
+
+  let json = JSON.stringify(base);
+  if (json.length <= 7200) return { payload: base, json };
+
+  base.prompts = base.prompts.slice(0, 15);
+  json = JSON.stringify(base);
+  while (json.length > 7200 && base.prompts.length > 0) {
+    base.prompts = base.prompts.slice(0, Math.floor(base.prompts.length / 2));
+    json = JSON.stringify(base);
+  }
+  while (json.length > 7400 && base.folders.length > 0) {
+    base.folders = base.folders.slice(0, -1);
+    json = JSON.stringify(base);
+  }
+  return { payload: base, json };
+}
+
+function sharedContentSignature(sharedPayload) {
+  return JSON.stringify({
+    folders: sharedPayload.folders,
+    prompts: sharedPayload.prompts,
+    lang: sharedPayload.lang,
+    themePreset: sharedPayload.themePreset
+  });
+}
 
 function buildQuotaSafeSyncPayload(syncPayload) {
   const rawJson = JSON.stringify(syncPayload);
@@ -142,11 +191,31 @@ export function saveFolderData(data, options = {}) {
     if (typeof chrome !== 'undefined' && chrome.storage?.sync?.set) {
       const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = data;
       const { payload, json: nextJson } = buildQuotaSafeSyncPayload(syncPayload);
-      if (nextJson === lastSelfWrittenSyncJson) return;
-      lastSelfWrittenSyncJson = nextJson;
-      chrome.storage.sync.set({ [P.storageKey]: payload }, () => {
-        void chrome.runtime?.lastError;
+      const { payload: sharedPayload, json: nextSharedJson } = buildQuotaSafeSharedPayload({
+        folders: data.folders,
+        prompts: data.prompts,
+        lang: data.lang,
+        themePreset: getCurrentThemePreset(),
+        updatedAt: Date.now()
       });
+      const nextSharedContentJson = sharedContentSignature(sharedPayload);
+
+      const patch = {};
+      if (nextJson !== lastSelfWrittenSyncJson) {
+        lastSelfWrittenSyncJson = nextJson;
+        patch[P.storageKey] = payload;
+      }
+      if (nextSharedContentJson !== lastSelfWrittenSharedContentJson) {
+        lastSelfWrittenSharedContentJson = nextSharedContentJson;
+        lastSelfWrittenSharedJson = nextSharedJson;
+        patch[SHARED_CONFIG_KEY] = sharedPayload;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        chrome.storage.sync.set(patch, () => {
+          void chrome.runtime?.lastError;
+        });
+      }
     }
   } catch (_) {}
 }
@@ -173,19 +242,48 @@ export function initCloudSync(getState, applyIncoming) {
   try {
     if (typeof chrome === 'undefined' || !chrome.storage?.sync?.get) return;
 
-    chrome.storage.sync.get([P.storageKey], (res) => {
+    chrome.storage.sync.get([P.storageKey, SHARED_CONFIG_KEY], (res) => {
       try {
         void chrome.runtime?.lastError;
         const cloudData = res?.[P.storageKey];
+        const sharedData = res?.[SHARED_CONFIG_KEY];
         const current = getState();
-        if (cloudData && typeof cloudData === 'object') {
+        const hasCloud = !!(cloudData && typeof cloudData === 'object');
+        const hasShared = !!(sharedData && typeof sharedData === 'object');
+
+        if (hasCloud || hasShared) {
+          if (hasShared) {
+            lastSelfWrittenSharedJson = JSON.stringify(sharedData);
+            if (sharedData.themePreset) {
+              const normalizedTheme = applyThemePreset(sharedData.themePreset, { persist: false });
+              try {
+                if (typeof localStorage !== 'undefined') {
+                  localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+                }
+              } catch (_) {}
+            }
+          }
+
+          const mergedFolders = mergeFoldersOrPrompts(
+            hasShared ? sharedData.folders : null,
+            mergeFoldersOrPrompts(hasCloud ? cloudData.folders : null, current.folders)
+          );
+          const mergedPrompts = mergeFoldersOrPrompts(
+            hasShared ? sharedData.prompts : null,
+            mergeFoldersOrPrompts(hasCloud ? cloudData.prompts : null, current.prompts)
+          );
+
           const mergedRaw = {
             ...current,
-            ...cloudData,
-            folders: mergeFoldersOrPrompts(cloudData.folders, current.folders),
-            prompts: mergeFoldersOrPrompts(cloudData.prompts, current.prompts),
-            assignments: { ...(current.assignments || {}), ...(cloudData.assignments || {}) },
-            protectedIds: { ...(current.protectedIds || {}), ...(cloudData.protectedIds || {}) },
+            ...(hasCloud ? cloudData : {}),
+            lang:
+              (hasShared && (sharedData.lang === 'en' || sharedData.lang === 'es') ? sharedData.lang : null) ||
+              (hasCloud && (cloudData.lang === 'en' || cloudData.lang === 'es') ? cloudData.lang : null) ||
+              current.lang,
+            folders: mergedFolders,
+            prompts: mergedPrompts,
+            assignments: { ...(current.assignments || {}), ...(hasCloud ? cloudData.assignments || {} : {}) },
+            protectedIds: { ...(current.protectedIds || {}), ...(hasCloud ? cloudData.protectedIds || {} : {}) },
             pos: current.pos,
             toolbarPos: current.toolbarPos,
             view: current.view
@@ -193,6 +291,14 @@ export function initCloudSync(getState, applyIncoming) {
           const merged = normalizeStoredState(mergedRaw, current.lang);
           const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = merged;
           lastSelfWrittenSyncJson = buildQuotaSafeSyncPayload(syncPayload).json;
+          if (hasShared) {
+            lastSelfWrittenSharedContentJson = sharedContentSignature({
+              folders: merged.folders,
+              prompts: merged.prompts,
+              lang: merged.lang,
+              themePreset: sharedData.themePreset || getCurrentThemePreset()
+            });
+          }
           localStorage.setItem(P.storageKey, JSON.stringify(merged));
           applyIncoming(merged);
         } else {
@@ -203,23 +309,66 @@ export function initCloudSync(getState, applyIncoming) {
 
     if (chrome.storage.onChanged?.addListener) {
       chrome.storage.onChanged.addListener((changes, area) => {
-        if (area !== 'sync' || !changes[P.storageKey]?.newValue) return;
-        try {
-          const incomingVal = changes[P.storageKey].newValue;
-          const incomingJson = JSON.stringify(incomingVal);
-          if (incomingJson === lastSelfWrittenSyncJson) return;
+        if (area !== 'sync') return;
+        const platformChange = changes[P.storageKey]?.newValue;
+        const sharedChange = changes[SHARED_CONFIG_KEY]?.newValue;
+        if (!platformChange && !sharedChange) return;
 
+        try {
           const current = getState();
-          const merged = normalizeStoredState(
-            {
-              ...incomingVal,
-              pos: current.pos,
-              toolbarPos: current.toolbarPos,
-              view: current.view
-            },
-            current.lang
-          );
-          lastSelfWrittenSyncJson = incomingJson;
+          let nextRaw = { ...current };
+          let changed = false;
+
+          if (platformChange && typeof platformChange === 'object') {
+            const incomingJson = JSON.stringify(platformChange);
+            if (incomingJson !== lastSelfWrittenSyncJson) {
+              lastSelfWrittenSyncJson = incomingJson;
+              nextRaw = {
+                ...platformChange,
+                pos: current.pos,
+                toolbarPos: current.toolbarPos,
+                view: current.view
+              };
+              changed = true;
+            }
+          }
+
+          if (sharedChange && typeof sharedChange === 'object') {
+            const incomingSharedJson = JSON.stringify(sharedChange);
+            if (incomingSharedJson !== lastSelfWrittenSharedJson) {
+              lastSelfWrittenSharedJson = incomingSharedJson;
+              if (sharedChange.themePreset) {
+                const normalizedTheme = applyThemePreset(sharedChange.themePreset, { persist: false });
+                try {
+                  if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+                  }
+                } catch (_) {}
+              }
+              nextRaw = {
+                ...nextRaw,
+                folders: Array.isArray(sharedChange.folders) ? sharedChange.folders : nextRaw.folders,
+                prompts: Array.isArray(sharedChange.prompts) ? sharedChange.prompts : nextRaw.prompts,
+                lang: sharedChange.lang === 'en' || sharedChange.lang === 'es' ? sharedChange.lang : nextRaw.lang,
+                assignments: nextRaw.assignments,
+                protectedIds: nextRaw.protectedIds,
+                pos: current.pos,
+                toolbarPos: current.toolbarPos,
+                view: current.view
+              };
+              lastSelfWrittenSharedContentJson = sharedContentSignature({
+                folders: nextRaw.folders,
+                prompts: nextRaw.prompts,
+                lang: nextRaw.lang,
+                themePreset: sharedChange.themePreset || getCurrentThemePreset()
+              });
+              changed = true;
+            }
+          }
+
+          if (!changed) return;
+
+          const merged = normalizeStoredState(nextRaw, current.lang);
           localStorage.setItem(P.storageKey, JSON.stringify(merged));
           applyIncoming(merged);
         } catch (_) {}

@@ -26,11 +26,21 @@ Object.assign(globalThis, {
 });
 Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true });
 
-const { normalizeStoredState, saveFolderData, initCloudSync } = await import('../src/storage.js');
-const { sanitizeMap } = await import('../src/backup.js');
-const { detectPlatform, detectHostTheme, syncHostTheme } = await import('../src/platform.js');
+const { SHARED_CONFIG_KEY, normalizeStoredState, saveFolderData, initCloudSync } = await import('../src/storage.js');
+const { decodeSyncCode, encodeSyncCode, sanitizeMap } = await import('../src/backup.js');
+const { GIST_FILENAME, GIST_STORAGE_KEY, syncWithGist } = await import('../src/gist-sync.js');
+const {
+  THEME_PRESETS,
+  THEME_STORAGE_KEY,
+  applyThemePreset,
+  detectHostTheme,
+  detectPlatform,
+  normalizeThemePreset,
+  syncHostTheme
+} = await import('../src/platform.js');
 const { parseConvId } = await import('../src/sidebar.js');
 const { resolveChatGptIdByTitle } = await import('../src/deletion.js');
+const { extractPromptVariables, substitutePromptVariables } = await import('../src/prompts.js');
 const { saveView, state } = await import('../src/state.js');
 
 test('normalizeStoredState descarta datos corruptos y aplica valores por defecto', () => {
@@ -251,4 +261,216 @@ test('normalizeStoredState maneja null y conserva prompts y chats protegidos vá
   assert.deepEqual(valid.assignments, { chat1: 'f1' });
   assert.equal(valid.prompts.length, 1);
   assert.equal(valid.prompts[0].title, 'Test');
+});
+
+test('extractPromptVariables extrae variables {{var}} únicas en orden y substitutePromptVariables las reemplaza', () => {
+  assert.deepEqual(extractPromptVariables('Sin variables aquí'), []);
+  assert.deepEqual(extractPromptVariables(null), []);
+
+  const template = 'Actúa como {{ rol }} y explica {{tema}} en {{ idioma }} para {{rol}} ({{tema}}).';
+  assert.deepEqual(extractPromptVariables(template), ['rol', 'tema', 'idioma']);
+
+  const filled = substitutePromptVariables(template, {
+    rol: 'Arquitecto',
+    tema: 'CQRS',
+    idioma: 'español'
+  });
+  assert.equal(filled, 'Actúa como Arquitecto y explica CQRS en español para Arquitecto (CQRS).');
+
+  // Conserva marcadores sin valor en el mapa y respeta cadenas vacías explícitas
+  assert.equal(
+    substitutePromptVariables('Hola {{nombre}}, {{extra}}', { nombre: '', extra: undefined }),
+    'Hola , undefined'
+  );
+  assert.equal(substitutePromptVariables('Hola {{nombre}} {{otro}}', { nombre: 'Ana' }), 'Hola Ana {{otro}}');
+});
+
+test('normalizeThemePreset y applyThemePreset validan los 5 presets y aplican data-gcm-style', () => {
+  assert.deepEqual(THEME_PRESETS, ['adaptive', 'neo-brutal', 'terminal', 'minimal-flat', 'neon-synth']);
+
+  for (const preset of THEME_PRESETS) {
+    assert.equal(normalizeThemePreset(`  ${preset.toUpperCase()}  `), preset);
+  }
+  assert.equal(normalizeThemePreset('invalid-preset'), 'adaptive');
+  assert.equal(normalizeThemePreset(null), 'adaptive');
+  assert.equal(normalizeThemePreset(42), 'adaptive');
+
+  dom.window.localStorage.removeItem(THEME_STORAGE_KEY);
+  dom.window.document.documentElement.removeAttribute('data-gcm-style');
+
+  const appliedNoPersist = applyThemePreset('terminal', { persist: false });
+  assert.equal(appliedNoPersist, 'terminal');
+  assert.equal(dom.window.document.documentElement.getAttribute('data-gcm-style'), 'terminal');
+  assert.equal(dom.window.localStorage.getItem(THEME_STORAGE_KEY), null);
+
+  const applied = applyThemePreset('neo-brutal');
+  assert.equal(applied, 'neo-brutal');
+  assert.equal(dom.window.document.documentElement.getAttribute('data-gcm-style'), 'neo-brutal');
+  assert.equal(dom.window.localStorage.getItem(THEME_STORAGE_KEY), 'neo-brutal');
+
+  dom.window.document.documentElement.removeAttribute('data-gcm-style');
+  syncHostTheme();
+  assert.equal(dom.window.document.documentElement.getAttribute('data-gcm-style'), 'neo-brutal');
+});
+
+test('SHARED_CONFIG_KEY (gcm_shared_config_v1) sincroniza carpetas/prompts/tema sin sobrescribir assignments/protectedIds ni exceder 8 KB', () => {
+  assert.equal(SHARED_CONFIG_KEY, 'gcm_shared_config_v1');
+
+  const chromeMock = createChromeMock({
+    quotaBytesPerItem: 8192,
+    initialSync: {
+      [SHARED_CONFIG_KEY]: {
+        folders: [{ id: 'f_shared', name: 'Compartida', color: '#34a853', keywords: ['sync'] }],
+        prompts: [{ id: 'p_shared', title: 'Prompt compartido', content: 'Hola {{nombre}}' }],
+        lang: 'en',
+        themePreset: 'neon-synth',
+        updatedAt: 1700000000000
+      }
+    }
+  });
+  globalThis.chrome = chromeMock;
+
+  let currentState = normalizeStoredState(
+    {
+      lang: 'es',
+      folders: [{ id: 'f_local', name: 'Local', color: '#4285f4', keywords: [] }],
+      prompts: [{ id: 'p_local', title: 'Local', content: 'Local' }],
+      assignments: { chat_platform_1: 'f_local' },
+      protectedIds: { chat_platform_2: true }
+    },
+    'es'
+  );
+
+  initCloudSync(
+    () => currentState,
+    (incoming) => {
+      currentState = incoming;
+    }
+  );
+
+  assert.equal(currentState.lang, 'en');
+  assert.equal(dom.window.document.documentElement.getAttribute('data-gcm-style'), 'neon-synth');
+  assert.equal(currentState.folders.some((f) => f.id === 'f_shared'), true);
+  assert.equal(currentState.folders.some((f) => f.id === 'f_local'), true);
+  assert.equal(currentState.prompts.some((p) => p.id === 'p_shared'), true);
+  assert.deepEqual(currentState.assignments, { chat_platform_1: 'f_local' });
+  assert.deepEqual(currentState.protectedIds, { chat_platform_2: true });
+
+  saveFolderData(currentState);
+  assert.equal(chromeMock.runtime.lastError, null);
+});
+
+test('encodeSyncCode y decodeSyncCode hacen roundtrip foldy1: y rechazan códigos inválidos', async () => {
+  const input = {
+    folders: [{ id: 'f1', name: 'Trabajo', color: '#4285f4', keywords: ['API', ' bug '] }],
+    prompts: [{ id: 'p1', title: 'Review', content: 'Revisa {{archivo}}' }],
+    lang: 'es',
+    themePreset: 'terminal',
+    updatedAt: 1700000000123
+  };
+
+  const code = await encodeSyncCode(input);
+  assert.equal(code.startsWith('foldy1:'), true);
+
+  const decoded = await decodeSyncCode(code);
+  assert.equal(decoded.lang, 'es');
+  assert.equal(decoded.themePreset, 'terminal');
+  assert.equal(decoded.updatedAt, 1700000000123);
+  assert.deepEqual(decoded.folders, [{ id: 'f1', name: 'Trabajo', color: '#4285f4', keywords: ['api', 'bug'] }]);
+  assert.deepEqual(decoded.prompts, [{ id: 'p1', title: 'Review', content: 'Revisa {{archivo}}' }]);
+
+  await assert.rejects(() => decodeSyncCode(null));
+  await assert.rejects(() => decodeSyncCode('invalid-prefix:abc'));
+  await assert.rejects(() => decodeSyncCode('foldy1:!!!not-base64url!!!'));
+  await assert.rejects(() => decodeSyncCode('foldy1:' + Buffer.from('{"lang":"es"}').toString('base64url')));
+});
+
+test('syncWithGist crea gist privado, hace pull/push según updatedAt y maneja errores de token/HTTP', async () => {
+  assert.equal(GIST_FILENAME, 'foldy-sync.json');
+  assert.equal(GIST_STORAGE_KEY, 'gcm_gist_config');
+
+  // 1. Error si falta el token
+  await assert.rejects(() => syncWithGist({ token: '   ', localConfig: {} }), /GitHub token is required/);
+
+  // 2. Error HTTP (401)
+  await assert.rejects(
+    () =>
+      syncWithGist({
+        token: 'ghp_bad',
+        gistId: 'gist_1',
+        localConfig: {},
+        fetchFn: async () => ({
+          ok: false,
+          status: 401,
+          json: async () => ({ message: 'Bad credentials' })
+        })
+      }),
+    /GitHub Gist API error 401: Bad credentials/
+  );
+
+  // 3. Crea gist privado cuando no hay gistId ni existe foldy-sync.json
+  const callsCreate = [];
+  const localCfg = { folders: [{ id: 'f1', name: 'Work' }], prompts: [], lang: 'es', updatedAt: 200 };
+  const createdRes = await syncWithGist({
+    token: 'ghp_ok',
+    localConfig: localCfg,
+    fetchFn: async (url, init) => {
+      callsCreate.push({ url, method: init.method, body: init.body });
+      if (init.method === 'GET' && url.includes('/gists?per_page=30')) {
+        return { ok: true, status: 200, json: async () => [{ id: 'other', files: { 'notes.txt': {} } }] };
+      }
+      if (init.method === 'POST' && url.endsWith('/gists')) {
+        return { ok: true, status: 201, json: async () => ({ id: 'gist_new_123' }) };
+      }
+      throw new Error(`Unexpected call: ${init.method} ${url}`);
+    }
+  });
+  assert.equal(createdRes.action, 'created');
+  assert.equal(createdRes.gistId, 'gist_new_123');
+  const postBody = JSON.parse(callsCreate[1].body);
+  assert.equal(postBody.public, false);
+  assert.ok(postBody.files[GIST_FILENAME].content.includes('"Work"'));
+
+  // 4. Pull cuando remote.updatedAt > local.updatedAt
+  const remoteCfg = { folders: [{ id: 'f_remote', name: 'Remote' }], prompts: [], lang: 'en', updatedAt: 500 };
+  const pullRes = await syncWithGist({
+    token: 'ghp_ok',
+    gistId: 'gist_abc',
+    localConfig: { ...localCfg, updatedAt: 200 },
+    fetchFn: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 'gist_abc',
+        files: { [GIST_FILENAME]: { content: JSON.stringify(remoteCfg) } }
+      })
+    })
+  });
+  assert.equal(pullRes.action, 'pulled');
+  assert.equal(pullRes.gistId, 'gist_abc');
+  assert.deepEqual(pullRes.config, remoteCfg);
+
+  // 5. Push (PATCH) cuando local.updatedAt >= remote.updatedAt
+  const callsPush = [];
+  const pushRes = await syncWithGist({
+    token: 'ghp_ok',
+    gistId: 'gist_abc',
+    localConfig: { ...localCfg, updatedAt: 500 },
+    fetchFn: async (url, init) => {
+      callsPush.push({ url, method: init.method });
+      if (init.method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: 'gist_abc',
+            files: { [GIST_FILENAME]: { content: JSON.stringify({ ...remoteCfg, updatedAt: 500 }) } }
+          })
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({ id: 'gist_abc' }) };
+    }
+  });
+  assert.equal(pushRes.action, 'pushed');
+  assert.equal(callsPush.some((c) => c.method === 'PATCH'), true);
 });

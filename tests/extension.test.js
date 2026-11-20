@@ -392,3 +392,172 @@ test('al marcar Todo (#gcm-select-all), carga automáticamente el historial haci
   assert.equal($$(w, '.gcm-checkbox.gcm-checked:not(#gcm-select-all)').length, 0);
   w.close();
 });
+
+test('búsqueda global instantánea (#gcm-search-input) filtra chats en tiempo real y limpia con Escape', async () => {
+  const w = loadExtension(bundle, 'gemini');
+  try {
+    await sleep(1100);
+    const searchWrap = $(w, '#gcm-folders-box .gcm-search-wrap');
+    const searchInput = $(w, '#gcm-search-input');
+    assert.ok(searchWrap, 'existe contenedor .gcm-search-wrap');
+    assert.ok(searchInput, 'existe #gcm-search-input');
+
+    searchInput.value = 'empanadas';
+    searchInput.dispatchEvent(new w.Event('input', { bubbles: true }));
+
+    // Sin debounce: el filtrado debe aplicarse de inmediato
+    assert.equal($$(w, '.gcm-chat-row.gcm-hidden-by-filter').length, 3, 'oculta los 3 chats que no coinciden');
+
+    searchInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert.equal(searchInput.value, '', 'Escape limpia el buscador');
+    assert.equal($$(w, '.gcm-chat-row.gcm-hidden-by-filter').length, 0, 'vuelven a mostrarse los 4 chats');
+  } finally {
+    w.close();
+  }
+});
+
+test('drag & drop asigna un chat a una carpeta y el toast Undo (5s) revierte la asignación', async () => {
+  const w = loadExtension(bundle, 'gemini');
+  try {
+    await sleep(1100);
+
+    const row = $(w, '.gcm-chat-row[data-gcm-conv-id="ccccc33333"]');
+    const targetPill = $(w, '.gcm-folder-pill.gcm-drop-target[data-folder-id="f_work"]');
+    assert.ok(row && row.draggable === true, 'la fila de chat es draggable');
+    assert.ok(targetPill, 'la píldora de carpeta es drop target');
+
+    let data = JSON.parse(w.localStorage.getItem(STORAGE_KEYS.gemini));
+    assert.equal(data.assignments.ccccc33333, undefined, 'el chat comienza sin carpeta');
+
+    const dtStore = {};
+    const dataTransfer = {
+      effectAllowed: '',
+      dropEffect: '',
+      setData(k, v) { dtStore[k] = v; },
+      getData(k) { return dtStore[k] || ''; }
+    };
+
+    const dragStart = new w.Event('dragstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(dragStart, 'dataTransfer', { value: dataTransfer });
+    row.dispatchEvent(dragStart);
+    assert.ok(row.classList.contains('gcm-dragging'), 'aplica .gcm-dragging al iniciar el arrastre');
+
+    const dragOver = new w.Event('dragover', { bubbles: true, cancelable: true });
+    Object.defineProperty(dragOver, 'dataTransfer', { value: dataTransfer });
+    targetPill.dispatchEvent(dragOver);
+    assert.ok(targetPill.classList.contains('gcm-drop-active'), 'aplica .gcm-drop-active sobre la píldora');
+
+    const dropEvt = new w.Event('drop', { bubbles: true, cancelable: true });
+    Object.defineProperty(dropEvt, 'dataTransfer', { value: dataTransfer });
+    targetPill.dispatchEvent(dropEvt);
+    assert.equal(targetPill.classList.contains('gcm-drop-active'), false, 'quita .gcm-drop-active al soltar');
+
+    row.dispatchEvent(new w.Event('dragend', { bubbles: true }));
+    assert.equal(row.classList.contains('gcm-dragging'), false, 'quita .gcm-dragging al finalizar');
+
+    data = JSON.parse(w.localStorage.getItem(STORAGE_KEYS.gemini));
+    assert.equal(data.assignments.ccccc33333, 'f_work', 'asigna el chat a la carpeta destino');
+
+    const undoToast = $(w, '.gcm-toast-undo');
+    const undoProgress = $(w, '.gcm-toast-undo .gcm-toast-progress');
+    const undoBtn = $(w, '.gcm-toast-undo .gcm-toast-undo-btn');
+    assert.ok(undoToast && undoProgress && undoBtn, 'muestra toast Undo con barra de progreso');
+
+    click(w, undoBtn);
+    await sleep(50);
+    assert.equal($(w, '.gcm-toast-undo'), null, 'cierra el toast Undo al hacer clic');
+
+    data = JSON.parse(w.localStorage.getItem(STORAGE_KEYS.gemini));
+    assert.equal(data.assignments.ccccc33333, undefined, 'revierte la asignación tras pulsar Deshacer');
+  } finally {
+    w.close();
+  }
+});
+
+test('bóveda de prompts abre modal de variables {{var}} y sustituye valores antes de insertar', async () => {
+  const initialData = JSON.stringify({
+    lang: 'es',
+    folders: [{ id: 'f_work', name: 'Programación', color: '#4285f4', keywords: ['python'] }],
+    prompts: [{ id: 'p_var', title: 'Explicar tema', content: 'Explica {{tema}} para nivel {{nivel}}.' }],
+    assignments: {},
+    protectedIds: {}
+  });
+  const w = loadExtension(bundle, 'gemini', { storage: { [STORAGE_KEYS.gemini]: initialData } });
+  try {
+    await sleep(1100);
+    click(w, $(w, '#gcm-prompts-btn'));
+    await sleep(80);
+    click(w, $(w, '.gcm-prompt-item'));
+    await sleep(80);
+
+    const varModal = $(w, '.gcm-modal-card.gcm-var-modal');
+    assert.ok(varModal, 'abre el modal de variables .gcm-var-modal');
+    const inputs = $$(w, '.gcm-var-modal .gcm-var-input');
+    assert.equal(inputs.length, 2, 'crea un campo por cada variable única');
+
+    inputs[0].value = 'TypeScript';
+    inputs[1].value = 'avanzado';
+    inputs[1].dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await sleep(80);
+
+    assert.equal($(w, '.gcm-modal-card.gcm-var-modal'), null, 'cierra el modal al enviar con Enter');
+    assert.equal($(w, '#chat-input').value, 'Explica TypeScript para nivel avanzado.');
+  } finally {
+    w.close();
+  }
+});
+
+test('SET_THEME_PRESET actualiza data-gcm-style en vivo para los 5 presets y aplica fallback adaptive', async () => {
+  const w = loadExtension(bundle, 'gemini');
+  try {
+    await sleep(1100);
+    assert.equal(w.document.documentElement.getAttribute('data-gcm-style'), 'adaptive');
+
+    for (const preset of ['neo-brutal', 'terminal', 'minimal-flat', 'neon-synth', 'adaptive']) {
+      w.chrome.__mock.sendRuntimeMessage({ type: 'SET_THEME_PRESET', preset });
+      await sleep(30);
+      assert.equal(w.document.documentElement.getAttribute('data-gcm-style'), preset);
+      assert.equal(w.localStorage.getItem('gcm_ui_theme_preset'), preset);
+    }
+
+    w.chrome.__mock.sendRuntimeMessage({ type: 'SET_THEME_PRESET', preset: 'unknown-style' });
+    await sleep(30);
+    assert.equal(w.document.documentElement.getAttribute('data-gcm-style'), 'adaptive');
+  } finally {
+    w.close();
+  }
+});
+
+test('gcm_shared_config_v1 sincroniza carpetas/prompts/tema entre plataformas sin sobrescribir asignaciones locales', async () => {
+  const localChatGpt = JSON.stringify({
+    lang: 'es',
+    folders: [{ id: 'f_work', name: 'Coding', color: '#4285f4', keywords: ['javascript'] }],
+    prompts: [{ id: 'p_local', title: 'Local', content: 'Local prompt' }],
+    assignments: { aaaaa11111: 'f_work' },
+    protectedIds: { bbbbb22222: true }
+  });
+  const sharedConfig = {
+    folders: [{ id: 'f_shared', name: 'Shared Cross-Platform', color: '#34a853', keywords: ['shared'] }],
+    prompts: [{ id: 'p_shared', title: 'Shared Prompt', content: 'Shared content' }],
+    lang: 'en',
+    themePreset: 'terminal',
+    updatedAt: 1700000000000
+  };
+
+  const w = loadExtension(bundle, 'chatgpt', {
+    storage: { [STORAGE_KEYS.chatgpt]: localChatGpt },
+    initialSync: { gcm_shared_config_v1: sharedConfig }
+  });
+  try {
+    await sleep(1100);
+    assert.equal(w.document.documentElement.getAttribute('data-gcm-style'), 'terminal');
+
+    const stored = JSON.parse(w.localStorage.getItem(STORAGE_KEYS.chatgpt));
+    assert.equal(stored.folders.some((f) => f.id === 'f_shared'), true, 'incorpora carpeta compartida');
+    assert.equal(stored.prompts.some((p) => p.id === 'p_shared'), true, 'incorpora prompt compartido');
+    assert.equal(stored.assignments.aaaaa11111, 'f_work', 'conserva assignments de la plataforma');
+    assert.equal(stored.protectedIds.bbbbb22222, true, 'conserva protectedIds de la plataforma');
+  } finally {
+    w.close();
+  }
+});

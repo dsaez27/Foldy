@@ -39,7 +39,7 @@
           <svg viewBox="0 0 24 24" width="11.5" height="11.5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
           <span id="cf-lang-label">ES</span>
         </button>
-        <span id="cf-version" class="cf-version">v3.6.0</span>
+        <span id="cf-version" class="cf-version">v3.8.0</span>
       </div>
     </header>
 
@@ -71,6 +71,60 @@
       <div id="cf-inactive-hint" class="cf-inactive-hint" style="display: none;">
         Abre una pestaña de Gemini, ChatGPT, Claude, DeepSeek u OpenCode para usar estas acciones.
       </div>
+    </section>
+
+    <section class="cf-section" id="cf-theme-section">
+      <div class="cf-section-title" id="cf-theme-title">Estilo Visual</div>
+      <div class="cf-theme-grid" id="cf-theme-grid">
+        <button type="button" class="cf-theme-chip active" data-theme-preset="adaptive" title="Estilo adaptativo por plataforma" aria-pressed="true">
+          <span class="cf-theme-swatch"></span>
+          <span class="cf-theme-label">Adaptativo</span>
+        </button>
+        <button type="button" class="cf-theme-chip" data-theme-preset="neo-brutal" title="Bordes marcados y sombras duras" aria-pressed="false">
+          <span class="cf-theme-swatch"></span>
+          <span class="cf-theme-label">Neo-Brutal</span>
+        </button>
+        <button type="button" class="cf-theme-chip" data-theme-preset="terminal" title="Estética consola monospace" aria-pressed="false">
+          <span class="cf-theme-swatch"></span>
+          <span class="cf-theme-label">Terminal</span>
+        </button>
+        <button type="button" class="cf-theme-chip" data-theme-preset="minimal-flat" title="Superficies planas sin sombras" aria-pressed="false">
+          <span class="cf-theme-swatch"></span>
+          <span class="cf-theme-label">Minimal Flat</span>
+        </button>
+        <button type="button" class="cf-theme-chip" data-theme-preset="neon-synth" title="Brillo neón y contraste oscuro" aria-pressed="false">
+          <span class="cf-theme-swatch"></span>
+          <span class="cf-theme-label">Neon Synth</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="cf-section" id="cf-sync-section">
+      <div class="cf-section-title" id="cf-sync-code-title">Sincronización Multi-Navegador</div>
+      <div class="cf-sync-box">
+        <div class="cf-sync-actions">
+          <button type="button" id="cf-copy-sync-code" class="cf-btn cf-sync-btn" title="Copiar código de sincronización">
+            <span id="cf-lbl-copy-sync">Copiar código</span>
+          </button>
+          <input type="text" id="cf-sync-code-input" placeholder="Pega código foldy1:..." autocomplete="off" spellcheck="false" />
+          <button type="button" id="cf-apply-sync-code" class="cf-btn cf-btn-primary cf-sync-btn" title="Aplicar código de sincronización">
+            <span id="cf-lbl-apply-sync">Aplicar</span>
+          </button>
+        </div>
+        <div id="cf-sync-status" class="cf-sync-status" aria-live="polite"></div>
+      </div>
+      <details class="cf-gist-box" id="cf-gist-box">
+        <summary id="cf-gist-summary">GitHub Gist Sync (Opcional)</summary>
+        <div class="cf-gist-fields">
+          <input type="password" id="cf-gist-token" placeholder="GitHub Token (scope: gist)" autocomplete="off" spellcheck="false" />
+          <input type="text" id="cf-gist-id" placeholder="Gist ID (auto)" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="cf-gist-actions">
+          <button type="button" id="cf-gist-sync-btn" class="cf-btn cf-btn-primary">Sincronizar</button>
+          <button type="button" id="cf-gist-clear-btn" class="cf-btn">Limpiar</button>
+        </div>
+        <div id="cf-gist-status" class="cf-gist-status" aria-live="polite"></div>
+      </details>
     </section>
 
     <footer class="cf-footer">

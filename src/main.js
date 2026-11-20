@@ -1,10 +1,98 @@
 import { applyFolderBadgesAndFilter, runAutoClassification } from './folders.js';
 import { injectSidebarFoldersPanel, registerGlobalListeners } from './panel.js';
-import { syncHostTheme } from './platform.js';
+import { applyThemePreset, syncHostTheme, THEME_STORAGE_KEY } from './platform.js';
 import { injectCheckboxes, setupDelegatedSidebarListener } from './selection.js';
 import { getConversationRows, getSidebarElement } from './sidebar.js';
 import { state } from './state.js';
 import { createToolbar, updateToolbarState } from './toolbar.js';
+
+const attachedStorageListeners = new WeakSet();
+const attachedRuntimeListeners = new WeakSet();
+
+function initThemeEngine() {
+  let fallbackPreset = null;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      fallbackPreset = localStorage.getItem(THEME_STORAGE_KEY);
+    }
+  } catch (_) {}
+  applyThemePreset(fallbackPreset, { persist: false });
+
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local?.get) {
+      chrome.storage.local.get([THEME_STORAGE_KEY], (res) => {
+        void chrome.runtime?.lastError;
+        const stored = res?.[THEME_STORAGE_KEY];
+        if (stored) {
+          const normalized = applyThemePreset(stored, { persist: false });
+          try {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem(THEME_STORAGE_KEY, normalized);
+            }
+          } catch (_) {}
+        }
+      });
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.sync?.get) {
+      chrome.storage.sync.get([THEME_STORAGE_KEY], (res) => {
+        void chrome.runtime?.lastError;
+        const synced = res?.[THEME_STORAGE_KEY];
+        if (synced) {
+          const normalized = applyThemePreset(synced, { persist: false });
+          try {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem(THEME_STORAGE_KEY, normalized);
+            }
+          } catch (_) {}
+          try {
+            if (chrome.storage?.local?.set) {
+              const p = chrome.storage.local.set({ [THEME_STORAGE_KEY]: normalized });
+              if (p && typeof p.catch === 'function') p.catch(() => {});
+            }
+          } catch (_) {}
+        }
+      });
+    }
+  } catch (_) {}
+
+  try {
+    if (
+      typeof chrome !== 'undefined' &&
+      chrome.storage?.onChanged?.addListener &&
+      !attachedStorageListeners.has(chrome.storage.onChanged)
+    ) {
+      attachedStorageListeners.add(chrome.storage.onChanged);
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if ((area !== 'local' && area !== 'sync') || !changes?.[THEME_STORAGE_KEY]) return;
+        const normalized = applyThemePreset(changes[THEME_STORAGE_KEY].newValue, { persist: false });
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(THEME_STORAGE_KEY, normalized);
+          }
+        } catch (_) {}
+      });
+    }
+  } catch (_) {}
+
+  try {
+    if (
+      typeof chrome !== 'undefined' &&
+      chrome.runtime?.onMessage?.addListener &&
+      !attachedRuntimeListeners.has(chrome.runtime.onMessage)
+    ) {
+      attachedRuntimeListeners.add(chrome.runtime.onMessage);
+      chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+        if (msg?.type === 'SET_THEME_PRESET') {
+          const applied = applyThemePreset(msg.preset);
+          sendResponse?.({ ok: true, preset: applied });
+        }
+      });
+    }
+  } catch (_) {}
+}
 
 function scheduleRefresh(delay = 120) {
   if (state.refreshDebounceTimer) return;
@@ -39,6 +127,7 @@ export function init() {
     return;
   }
   syncHostTheme();
+  initThemeEngine();
   registerGlobalListeners();
   setupDelegatedSidebarListener();
   setTimeout(refreshUI, 800);

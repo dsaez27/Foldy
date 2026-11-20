@@ -281,3 +281,118 @@ export function updateStatusToast(text, current = null, total = null, autoHideMs
     }, autoHideMs);
   }
 }
+
+/**
+ * Abre un modal ligero para rellenar variables dinámicas {{varName}} de un prompt.
+ * @param {string} promptTitle
+ * @param {string[]} variables
+ * @returns {Promise<Record<string, string> | null>}
+ */
+export function openPromptVarsModal(promptTitle, variables) {
+  return new Promise((resolve) => {
+    const existing = document.getElementById('gcm-modal-overlay');
+    if (existing) {
+      existing._gcmClose?.(null);
+      existing.remove();
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'gcm-modal-overlay';
+
+    const card = document.createElement('div');
+    card.className = 'gcm-modal-card gcm-var-modal';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+
+    const title = document.createElement('div');
+    title.className = 'gcm-modal-title';
+    title.textContent = t().varModalTitle;
+
+    const desc = document.createElement('div');
+    desc.className = 'gcm-modal-desc';
+    desc.textContent = t().varModalDesc(promptTitle);
+
+    const fieldsWrap = document.createElement('div');
+    fieldsWrap.className = 'gcm-var-fields';
+
+    const inputs = variables.map((varName, idx) => {
+      const field = document.createElement('div');
+      field.className = 'gcm-var-field';
+
+      const label = document.createElement('label');
+      label.className = 'gcm-var-label';
+      label.htmlFor = `gcm-var-input-${idx}`;
+      label.textContent = varName;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'gcm-modal-input gcm-var-input';
+      input.id = `gcm-var-input-${idx}`;
+      input.placeholder = t().varInputPlaceholder(varName);
+      input.dataset.var = varName;
+
+      field.append(label, input);
+      fieldsWrap.appendChild(field);
+      return input;
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'gcm-modal-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'gcm-btn gcm-btn-cancel';
+    cancelBtn.textContent = t().cancel;
+
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'button';
+    submitBtn.className = 'gcm-btn gcm-btn-stop';
+    submitBtn.textContent = t().varInsertBtn;
+
+    let settled = false;
+    const close = (result) => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onEsc);
+      overlay.remove();
+      resolve(result);
+    };
+    overlay._gcmClose = close;
+
+    const handleSubmit = () => {
+      const values = {};
+      for (const input of inputs) {
+        values[input.dataset.var] = input.value;
+      }
+      close(values);
+    };
+
+    function onEsc(e) {
+      if (e.key === 'Escape') {
+        close(null);
+      }
+    }
+    document.addEventListener('keydown', onEsc);
+
+    for (const input of inputs) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSubmit();
+        }
+      });
+    }
+
+    cancelBtn.addEventListener('click', () => close(null));
+    submitBtn.addEventListener('click', handleSubmit);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close(null);
+    });
+
+    actions.append(cancelBtn, submitBtn);
+    card.append(title, desc, fieldsWrap, actions);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    setTimeout(() => inputs[0]?.focus(), 40);
+  });
+}

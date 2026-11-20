@@ -7,6 +7,38 @@ const REPO = 'dsaez27/Foldy';
 
 const releases = [
   {
+    tag: 'v3.8.0',
+    title: 'Foldy v3.8.0 — 5 Visual Themes, Unified Cross-Platform Sync & Sync Code',
+    body: `### 🇺🇸 English
+- **5-Preset Visual Theme Engine**: Added 5 distinct visual styles (\`Adaptive\`, \`Neo-Brutal\`, \`Terminal\`, \`Minimal Flat\`, \`Neon Synth\`) selectable live from the popup across light and dark host themes.
+- **Unified Cross-Platform Sync (\`gcm_shared_config_v1\`)**: Folders, auto-rules, Prompt Vault, language, and visual theme sync automatically across Gemini, ChatGPT, Claude, DeepSeek, and OpenCode tabs (and across PCs via \`chrome.storage.sync\`).
+- **Cross-Browser Sync Code (\`foldy1:\`)**: Copy & Apply Sync Code in the popup using native \`CompressionStream('gzip')\` + Base64url to transfer your setup between Chrome, Edge, and Brave.
+
+---
+
+### 🇪🇸 Español
+- **Motor de 5 Estilos Visuales**: 5 temas distintos (\`Adaptive\`, \`Neo-Brutal\`, \`Terminal\`, \`Minimal Flat\`, \`Neon Synth\`) seleccionables en vivo desde el popup en modo claro y oscuro.
+- **Sincronización Unificada Multi-Plataforma (\`gcm_shared_config_v1\`)**: Carpetas, auto-reglas, Bóveda de Prompts, idioma y tema visual se sincronizan automáticamente entre Gemini, ChatGPT, Claude, DeepSeek y OpenCode (y entre PCs vía \`chrome.storage.sync\`).
+- **Sync Code entre Navegadores (\`foldy1:\`)**: Botones Copiar y Aplicar Sync Code en el popup usando \`CompressionStream('gzip')\` nativo + Base64url para llevar tu configuración entre Chrome, Edge y Brave.`
+  },
+  {
+    tag: 'v3.7.0',
+    title: 'Foldy v3.7.0 — Native Drag & Drop, 5s Undo, Instant Search & Dynamic Prompt Variables',
+    body: `### 🇺🇸 English
+- **Native Drag & Drop + 5s Undo (\`D-07\`)**: Drag chat rows directly onto folder pills with dropzone highlight and a 5-second Undo toast with animated countdown bar.
+- **Instant Global Search**: Real-time \`#gcm-search-input\` filtering without debounce (\`Escape\` to clear).
+- **Dynamic Prompt Variables (\`{{var}}\`)**: Detects \`{{variable}}\` placeholders in the Prompt Vault and opens a quick-fill modal before inserting into the chat.
+- **Modern Lightweight CSS**: Native CSS nesting, \`color-mix()\`, \`@starting-style\`, \`:has()\`, and \`prefers-reduced-motion\` with zero bloat.
+
+---
+
+### 🇪🇸 Español
+- **Drag & Drop Nativo + Deshacer en 5s (\`D-07\`)**: Arrastra chats directamente sobre las píldoras de carpetas con resaltado de zona de caída y toast Deshacer de 5 segundos con barra de progreso animada.
+- **Búsqueda Global Instantánea**: Filtrado en tiempo real con \`#gcm-search-input\` sin retardo (\`Escape\` para limpiar).
+- **Variables Dinámicas en Prompts (\`{{var}}\`)**: Detecta placeholders \`{{variable}}\` en la Bóveda de Prompts y abre un modal rápido antes de insertar.
+- **CSS Moderno y Liviano**: Nesting CSS nativo, \`color-mix()\`, \`@starting-style\`, \`:has()\` y \`prefers-reduced-motion\` sin dependencias externas.`
+  },
+  {
     tag: 'v3.6.0',
     title: 'Foldy v3.6.0 — Adaptive Platform Design, Contextual Dock, Command Palette & Sync Quota Meter',
     body: `### 🇺🇸 English

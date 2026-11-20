@@ -13,17 +13,17 @@
 | Field | Value |
 |---|---|
 | Project | **Foldy** |
-| Version Under Test | `3.6.0` (`package.json`, `extension/manifest.json`) |
+| Version Under Test | `3.8.0` (`package.json`, `extension/manifest.json`) |
 | Product Type | Browser WebExtension (Manifest V3) |
-| Automated Test Stack | `node:test` + `jsdom` + `chrome-storage-mock` (40 automated tests: 12 unit + 28 DOM integration + `scripts/validate-extension.mjs`) |
+| Automated Test Stack | `node:test` + `jsdom` + `chrome-storage-mock` (50 automated tests: 17 unit + 33 DOM integration + `scripts/validate-extension.mjs`) |
 | Target Browsers | **Chrome, Edge, Brave, Firefox, Opera, and Safari** (latest stable versions) |
-| Date | 2026-11-19 |
-| Status | Executed & Verified (40/40 PASS) |
+| Date | 2026-11-20 |
+| Status | Executed & Verified (50/50 PASS) |
 | Document | `TESTING_PLAN.md` |
 
 ## 1. Objective
 
-Define a rigorous, reproducible testing strategy to verify that **Foldy v3.6.0** runs safely, consistently, and without regressions across all **5 supported AI platforms** (Gemini, ChatGPT, Claude, DeepSeek, and OpenCode) and all **6 target browsers** in their latest versions:
+Define a rigorous, reproducible testing strategy to verify that **Foldy v3.8.0** runs safely, consistently, and without regressions across all **5 supported AI platforms** (Gemini, ChatGPT, Claude, DeepSeek, and OpenCode) and all **6 target browsers** in their latest versions:
 
 - **Chromium Family (Blink + V8):** Google Chrome, Microsoft Edge, Brave, Opera.
 - **Gecko Family (SpiderMonkey):** Mozilla Firefox.
@@ -144,17 +144,17 @@ A **Foldy** release is **APPROVED** only if:
 | Campo | Valor |
 |---|---|
 | Proyecto | **Foldy** |
-| Versión bajo prueba | `3.6.0` (`package.json`, `extension/manifest.json`) |
+| Versión bajo prueba | `3.8.0` (`package.json`, `extension/manifest.json`) |
 | Tipo de producto | Extensión de navegador WebExtension (Manifest V3) |
-| Stack de pruebas actual | `node:test` + `jsdom` + `chrome-storage-mock` (40 pruebas automatizadas: 12 unitarias + 28 de integración DOM + `scripts/validate-extension.mjs`) |
+| Stack de pruebas actual | `node:test` + `jsdom` + `chrome-storage-mock` (50 pruebas automatizadas: 17 unitarias + 33 de integración DOM + `scripts/validate-extension.mjs`) |
 | Navegadores objetivo | **Chrome, Edge, Brave, Firefox, Opera y Safari** (últimas versiones estables) |
-| Fecha | 2026-11-19 |
-| Estado | Ejecutado y verificado (40/40 PASS) |
+| Fecha | 2026-11-20 |
+| Estado | Ejecutado y verificado (50/50 PASS) |
 | Documento | `TESTING_PLAN.md` |
 
 ## 1. Objetivo
 
-Definir una estrategia minuciosa y reproducible para verificar que **Foldy v3.6.0** funciona de forma segura, consistente y sin regresiones en las **5 plataformas de IA soportadas** (Gemini, ChatGPT, Claude, DeepSeek y OpenCode) y en los **6 navegadores objetivo** en sus últimas versiones:
+Definir una estrategia minuciosa y reproducible para verificar que **Foldy v3.8.0** funciona de forma segura, consistente y sin regresiones en las **5 plataformas de IA soportadas** (Gemini, ChatGPT, Claude, DeepSeek y OpenCode) y en los **6 navegadores objetivo** en sus últimas versiones:
 
 - **Familia Chromium (Blink + V8):** Google Chrome, Microsoft Edge, Brave, Opera.
 - **Familia Gecko (SpiderMonkey):** Mozilla Firefox.

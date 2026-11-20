@@ -2,6 +2,38 @@
 
 ---
 
+## [v3.8.0] - 2026-11-20
+
+### 🇺🇸 English
+- **5-Preset Visual Theme Engine**: Added 5 distinct visual styles (`Adaptive`, `Neo-Brutal`, `Terminal`, `Minimal Flat`, `Neon Synth`) selectable live from the popup (`data-gcm-style`) across light and dark host themes.
+- **Unified Cross-Platform Sync (`gcm_shared_config_v1`)**: Folders, auto-rules, Prompt Vault, language, and visual theme now sync automatically across Gemini, ChatGPT, Claude, DeepSeek, and OpenCode tabs (and across PCs via `chrome.storage.sync`), keeping per-platform chat assignments isolated.
+- **Cross-Browser Sync Code (`foldy1:`)**: Copy & Apply Sync Code in the popup using native `CompressionStream('gzip')` + Base64url to transfer your setup between Chrome, Edge, and Brave in seconds without external servers.
+- **Private GitHub Gist Sync**: Optional automatic sync via private GitHub Gist (`foldy-sync.json`) in the popup, keeping the personal token strictly in `chrome.storage.local` and merging by `updatedAt`.
+
+### 🇪🇸 Español
+- **Motor de 5 Estilos Visuales**: 5 temas distintos (`Adaptive`, `Neo-Brutal`, `Terminal`, `Minimal Flat`, `Neon Synth`) seleccionables en vivo desde el popup (`data-gcm-style`) en modo claro y oscuro.
+- **Sincronización Unificada Multi-Plataforma (`gcm_shared_config_v1`)**: Carpetas, auto-reglas, Bóveda de Prompts, idioma y tema visual ahora se sincronizan automáticamente entre Gemini, ChatGPT, Claude, DeepSeek y OpenCode (y entre PCs vía `chrome.storage.sync`), manteniendo aisladas las asignaciones por plataforma.
+- **Sync Code entre Navegadores (`foldy1:`)**: Botones Copiar y Aplicar Sync Code en el popup usando `CompressionStream('gzip')` nativo + Base64url para llevar tu configuración entre Chrome, Edge y Brave sin servidores externos.
+- **Sync Automático con GitHub Gist Privado**: Sincronización opcional en el popup contra un Gist privado (`foldy-sync.json`), guardando el token solo en `chrome.storage.local` y resolviendo cambios por `updatedAt`.
+
+---
+
+## [v3.7.0] - 2026-11-20
+
+### 🇺🇸 English
+- **Native Drag & Drop + 5s Undo (`D-07`)**: Drag chat rows directly onto folder pills (or Unassigned) with dropzone highlight and a 5-second Undo toast (`.gcm-toast-undo`) with animated countdown bar to revert assignments.
+- **Instant Global Search**: Real-time `#gcm-search-input` filtering without debounce (`Escape` to clear) combined with active folder and lock filters.
+- **Dynamic Prompt Variables (`{{var}}`)**: Automatically detects `{{variable}}` placeholders in Prompt Vault (`matchAll` + `Set`) and opens a quick-fill modal before inserting into the chat.
+- **Modern Lightweight CSS**: Native CSS nesting, `color-mix()`, `@starting-style`, `:has()`, `cubic-bezier` micro-interactions, and `prefers-reduced-motion` support with zero external dependencies.
+
+### 🇪🇸 Español
+- **Drag & Drop Nativo + Deshacer en 5s (`D-07`)**: Arrastra conversaciones directamente sobre las píldoras de carpetas (o Sin asignar) con resaltado de zona de caída y toast **Deshacer** de 5 segundos con barra de progreso animada.
+- **Búsqueda Global Instantánea**: Filtrado en tiempo real con `#gcm-search-input` sin retardo (`Escape` para limpiar), combinado con filtros de carpeta y candado.
+- **Variables Dinámicas en Prompts (`{{var}}`)**: Detecta automáticamente placeholders `{{variable}}` en la Bóveda de Prompts (`matchAll` + `Set`) y abre un modal rápido para rellenar valores antes de insertar.
+- **CSS Moderno y Liviano**: Nesting CSS nativo, `color-mix()`, `@starting-style`, `:has()`, micro-interacciones `cubic-bezier` y soporte `prefers-reduced-motion` sin dependencias externas.
+
+---
+
 ## [v3.6.0] - 2026-11-20
 
 ### 🇺🇸 English

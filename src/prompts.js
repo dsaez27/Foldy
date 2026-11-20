@@ -1,8 +1,39 @@
-import { updateStatusToast } from './dialogs.js';
+import { openPromptVarsModal, updateStatusToast } from './dialogs.js';
 import { ICONS, createIconElement, setButtonIconText } from './icons.js';
 import { SELECTORS } from './platform.js';
 import { state, t } from './state.js';
 import { saveFolderData } from './storage.js';
+
+const VAR_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;
+
+/**
+ * Extrae los nombres únicos de variables {{varName}} en orden de aparición.
+ * @param {string} text
+ * @returns {string[]}
+ */
+export function extractPromptVariables(text) {
+  if (typeof text !== 'string' || !text.includes('{{')) return [];
+  const seen = new Set();
+  for (const match of text.matchAll(VAR_PATTERN)) {
+    const name = match[1].trim();
+    if (name) seen.add(name);
+  }
+  return [...seen];
+}
+
+/**
+ * Sustituye cada marcador {{varName}} por su valor en el objeto dado.
+ * @param {string} text
+ * @param {Record<string, string>} values
+ * @returns {string}
+ */
+export function substitutePromptVariables(text, values = {}) {
+  if (typeof text !== 'string' || !values) return text;
+  return text.replace(VAR_PATTERN, (full, rawName) => {
+    const key = rawName.trim();
+    return Object.hasOwn(values, key) ? String(values[key]) : full;
+  });
+}
 
 /**
  * Inserta el texto del prompt en el cuadro de entrada del chat activo (compatible con
@@ -72,7 +103,7 @@ export function openPromptsModal() {
   }
 
   if (!Array.isArray(state.folderState.prompts)) {
-    state.folderState.prompts = t().defaultPrompts.map((p) => ({ ...p }));
+    state.folderState.prompts = structuredClone(t().defaultPrompts);
   }
 
   const isEs = state.folderState.lang === 'es';
@@ -269,15 +300,25 @@ export function openPromptsModal() {
         openDrawer(p);
       });
 
+      const handleUse = async (e) => {
+        e?.stopPropagation();
+        const vars = extractPromptVariables(p.content);
+        closeModal();
+        if (vars.length === 0) {
+          insertPromptIntoChat(p.content);
+          return;
+        }
+        const values = await openPromptVarsModal(p.title, vars);
+        if (values) {
+          insertPromptIntoChat(substitutePromptVariables(p.content, values));
+        }
+      };
+
       const useBtn = document.createElement('button');
       useBtn.type = 'button';
       useBtn.className = 'gcm-btn gcm-btn-stop gcm-prompt-use-btn';
       useBtn.textContent = `${t().insertPromptBtn} ↵`;
-      useBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        closeModal();
-        insertPromptIntoChat(p.content);
-      });
+      useBtn.addEventListener('click', handleUse);
 
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
@@ -296,15 +337,11 @@ export function openPromptsModal() {
       itemActions.appendChild(useBtn);
       itemActions.appendChild(delBtn);
 
-      item.addEventListener('click', () => {
-        closeModal();
-        insertPromptIntoChat(p.content);
-      });
+      item.addEventListener('click', handleUse);
       item.addEventListener('keydown', (e) => {
         if (e.target === item && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault();
-          closeModal();
-          insertPromptIntoChat(p.content);
+          handleUse(e);
         }
       });
 

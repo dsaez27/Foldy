@@ -383,6 +383,55 @@
   var P = PLATFORMS[PLATFORM_KEY] || PLATFORMS.gemini;
   var SELECTORS = P.selectors;
   var PRESET_COLORS = ["#4285f4", "#34a853", "#fbbc04", "#ea4335", "#a142f4", "#24c1e0", "#ff6d00"];
+  var THEME_PRESETS = ["adaptive", "neo-brutal", "terminal", "minimal-flat", "neon-synth"];
+  var THEME_STORAGE_KEY = "gcm_ui_theme_preset";
+  function normalizeThemePreset(val) {
+    if (typeof val === "string") {
+      const normalized = val.trim().toLowerCase();
+      if (THEME_PRESETS.includes(normalized)) {
+        return normalized;
+      }
+    }
+    return "adaptive";
+  }
+  function applyThemePreset(preset, { persist = true } = {}) {
+    const normalized = normalizeThemePreset(preset);
+    try {
+      document.documentElement?.setAttribute("data-gcm-style", normalized);
+    } catch (_) {
+    }
+    if (persist) {
+      try {
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem(THEME_STORAGE_KEY, normalized);
+        }
+      } catch (_) {
+      }
+      try {
+        if (typeof chrome !== "undefined" && chrome.storage?.local?.set) {
+          const res = chrome.storage.local.set({ [THEME_STORAGE_KEY]: normalized });
+          if (res && typeof res.catch === "function") {
+            res.catch(() => {
+            });
+          }
+        }
+      } catch (_) {
+      }
+      try {
+        if (typeof chrome !== "undefined" && chrome.storage?.sync?.set) {
+          const res = chrome.storage.sync.set({ [THEME_STORAGE_KEY]: normalized }, () => {
+            void chrome.runtime?.lastError;
+          });
+          if (res && typeof res.catch === "function") {
+            res.catch(() => {
+            });
+          }
+        }
+      } catch (_) {
+      }
+    }
+    return normalized;
+  }
   function parseRgbLuminance(colorStr) {
     if (!colorStr || typeof colorStr !== "string") return null;
     const m = colorStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
@@ -440,6 +489,16 @@
         root.setAttribute("data-gcm-theme", theme);
         if (PLATFORM_KEY) {
           root.setAttribute("data-gcm-platform", PLATFORM_KEY);
+        }
+        if (!root.getAttribute("data-gcm-style")) {
+          let saved = null;
+          try {
+            if (typeof localStorage !== "undefined") {
+              saved = localStorage.getItem(THEME_STORAGE_KEY);
+            }
+          } catch (_) {
+          }
+          root.setAttribute("data-gcm-style", normalizeThemePreset(saved));
         }
       }
     } catch (_) {
@@ -549,6 +608,32 @@
       searchClearTitle: "Limpiar búsqueda",
       toastPromptInserted: "⚡ Prompt insertado en el chat.",
       toastPromptCopied: "📋 Prompt copiado al portapapeles.",
+      varModalTitle: "Completar Variables del Prompt",
+      varModalDesc: (title) => `Ingresa los valores para "${title}":`,
+      varInputPlaceholder: (name) => `Valor para ${name}...`,
+      varInsertBtn: "Insertar Prompt",
+      undoBtn: "Deshacer",
+      toastAssignmentUndone: "↩️ Asignación revertida.",
+      themeStyleLabel: "Estilo visual",
+      themeAdaptive: "Adaptativo",
+      themeNeoBrutal: "Neo-Brutal",
+      themeTerminal: "Terminal",
+      themeMinimalFlat: "Minimal Plano",
+      themeNeonSynth: "Neon Synth",
+      syncCodeTitle: "Sincronización entre navegadores",
+      copySyncCodeBtn: "Copiar código",
+      pasteSyncCodeBtn: "Aplicar código",
+      syncCodePlaceholder: "Pega un código foldy1:...",
+      syncCodeCopied: "Código de sincronización copiado.",
+      syncCodeApplied: "Configuración sincronizada correctamente.",
+      syncCodeInvalid: "Código de sincronización inválido.",
+      gistTitle: "GitHub Gist Sync (Opcional)",
+      gistTokenPlaceholder: "Token de GitHub (scope: gist)",
+      gistIdPlaceholder: "Gist ID (auto)",
+      gistSyncBtn: "Sincronizar",
+      gistClearBtn: "Limpiar",
+      gistSynced: "Gist sincronizado correctamente.",
+      gistError: "Error al sincronizar con GitHub Gist.",
       defaultPrompts: [
         {
           id: "p_code",
@@ -672,6 +757,32 @@
       searchClearTitle: "Clear search",
       toastPromptInserted: "⚡ Prompt inserted into chat.",
       toastPromptCopied: "📋 Prompt copied to clipboard.",
+      varModalTitle: "Fill Prompt Variables",
+      varModalDesc: (title) => `Enter values for "${title}":`,
+      varInputPlaceholder: (name) => `Value for ${name}...`,
+      varInsertBtn: "Insert Prompt",
+      undoBtn: "Undo",
+      toastAssignmentUndone: "↩️ Assignment reverted.",
+      themeStyleLabel: "Visual style",
+      themeAdaptive: "Adaptive",
+      themeNeoBrutal: "Neo-Brutal",
+      themeTerminal: "Terminal",
+      themeMinimalFlat: "Minimal Flat",
+      themeNeonSynth: "Neon Synth",
+      syncCodeTitle: "Cross-Browser Sync",
+      copySyncCodeBtn: "Copy Sync Code",
+      pasteSyncCodeBtn: "Apply Code",
+      syncCodePlaceholder: "Paste a foldy1:... code",
+      syncCodeCopied: "Sync code copied to clipboard.",
+      syncCodeApplied: "Shared config applied!",
+      syncCodeInvalid: "Invalid sync code.",
+      gistTitle: "GitHub Gist Sync (Optional)",
+      gistTokenPlaceholder: "GitHub Token (scope: gist)",
+      gistIdPlaceholder: "Gist ID (auto)",
+      gistSyncBtn: "Sync Now",
+      gistClearBtn: "Clear",
+      gistSynced: "Gist synced successfully.",
+      gistError: "GitHub Gist sync failed.",
       defaultPrompts: [
         {
           id: "p_code",
@@ -702,6 +813,7 @@
   }
 
   // src/storage.js
+  var SHARED_CONFIG_KEY = "gcm_shared_config_v1";
   function sanitizeMap(src, mapValue) {
     const out = {};
     if (!src || typeof src !== "object" || Array.isArray(src)) return out;
@@ -768,6 +880,49 @@
     return initial;
   }
   var lastSelfWrittenSyncJson = null;
+  var lastSelfWrittenSharedJson = null;
+  var lastSelfWrittenSharedContentJson = null;
+  function getCurrentThemePreset() {
+    try {
+      const attr = typeof document !== "undefined" ? document.documentElement?.getAttribute("data-gcm-style") : null;
+      if (attr) return normalizeThemePreset(attr);
+      if (typeof localStorage !== "undefined") {
+        return normalizeThemePreset(localStorage.getItem(THEME_STORAGE_KEY));
+      }
+    } catch (_) {
+    }
+    return "adaptive";
+  }
+  function buildQuotaSafeSharedPayload(sharedPayload) {
+    const base = {
+      folders: Array.isArray(sharedPayload.folders) ? sharedPayload.folders : [],
+      prompts: Array.isArray(sharedPayload.prompts) ? sharedPayload.prompts : [],
+      lang: sharedPayload.lang === "en" || sharedPayload.lang === "es" ? sharedPayload.lang : "es",
+      themePreset: normalizeThemePreset(sharedPayload.themePreset),
+      updatedAt: Number.isFinite(sharedPayload.updatedAt) ? sharedPayload.updatedAt : Date.now()
+    };
+    let json = JSON.stringify(base);
+    if (json.length <= 7200) return { payload: base, json };
+    base.prompts = base.prompts.slice(0, 15);
+    json = JSON.stringify(base);
+    while (json.length > 7200 && base.prompts.length > 0) {
+      base.prompts = base.prompts.slice(0, Math.floor(base.prompts.length / 2));
+      json = JSON.stringify(base);
+    }
+    while (json.length > 7400 && base.folders.length > 0) {
+      base.folders = base.folders.slice(0, -1);
+      json = JSON.stringify(base);
+    }
+    return { payload: base, json };
+  }
+  function sharedContentSignature(sharedPayload) {
+    return JSON.stringify({
+      folders: sharedPayload.folders,
+      prompts: sharedPayload.prompts,
+      lang: sharedPayload.lang,
+      themePreset: sharedPayload.themePreset
+    });
+  }
   function buildQuotaSafeSyncPayload(syncPayload) {
     const rawJson = JSON.stringify(syncPayload);
     if (rawJson.length <= 7200) return { payload: syncPayload, json: rawJson };
@@ -813,11 +968,29 @@
       if (typeof chrome !== "undefined" && chrome.storage?.sync?.set) {
         const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = data;
         const { payload, json: nextJson } = buildQuotaSafeSyncPayload(syncPayload);
-        if (nextJson === lastSelfWrittenSyncJson) return;
-        lastSelfWrittenSyncJson = nextJson;
-        chrome.storage.sync.set({ [P.storageKey]: payload }, () => {
-          void chrome.runtime?.lastError;
+        const { payload: sharedPayload, json: nextSharedJson } = buildQuotaSafeSharedPayload({
+          folders: data.folders,
+          prompts: data.prompts,
+          lang: data.lang,
+          themePreset: getCurrentThemePreset(),
+          updatedAt: Date.now()
         });
+        const nextSharedContentJson = sharedContentSignature(sharedPayload);
+        const patch = {};
+        if (nextJson !== lastSelfWrittenSyncJson) {
+          lastSelfWrittenSyncJson = nextJson;
+          patch[P.storageKey] = payload;
+        }
+        if (nextSharedContentJson !== lastSelfWrittenSharedContentJson) {
+          lastSelfWrittenSharedContentJson = nextSharedContentJson;
+          lastSelfWrittenSharedJson = nextSharedJson;
+          patch[SHARED_CONFIG_KEY] = sharedPayload;
+        }
+        if (Object.keys(patch).length > 0) {
+          chrome.storage.sync.set(patch, () => {
+            void chrome.runtime?.lastError;
+          });
+        }
       }
     } catch (_) {
     }
@@ -838,19 +1011,43 @@
   function initCloudSync(getState, applyIncoming) {
     try {
       if (typeof chrome === "undefined" || !chrome.storage?.sync?.get) return;
-      chrome.storage.sync.get([P.storageKey], (res) => {
+      chrome.storage.sync.get([P.storageKey, SHARED_CONFIG_KEY], (res) => {
         try {
           void chrome.runtime?.lastError;
           const cloudData = res?.[P.storageKey];
+          const sharedData = res?.[SHARED_CONFIG_KEY];
           const current = getState();
-          if (cloudData && typeof cloudData === "object") {
+          const hasCloud = !!(cloudData && typeof cloudData === "object");
+          const hasShared = !!(sharedData && typeof sharedData === "object");
+          if (hasCloud || hasShared) {
+            if (hasShared) {
+              lastSelfWrittenSharedJson = JSON.stringify(sharedData);
+              if (sharedData.themePreset) {
+                const normalizedTheme = applyThemePreset(sharedData.themePreset, { persist: false });
+                try {
+                  if (typeof localStorage !== "undefined") {
+                    localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+                  }
+                } catch (_) {
+                }
+              }
+            }
+            const mergedFolders = mergeFoldersOrPrompts(
+              hasShared ? sharedData.folders : null,
+              mergeFoldersOrPrompts(hasCloud ? cloudData.folders : null, current.folders)
+            );
+            const mergedPrompts = mergeFoldersOrPrompts(
+              hasShared ? sharedData.prompts : null,
+              mergeFoldersOrPrompts(hasCloud ? cloudData.prompts : null, current.prompts)
+            );
             const mergedRaw = {
               ...current,
-              ...cloudData,
-              folders: mergeFoldersOrPrompts(cloudData.folders, current.folders),
-              prompts: mergeFoldersOrPrompts(cloudData.prompts, current.prompts),
-              assignments: { ...current.assignments || {}, ...cloudData.assignments || {} },
-              protectedIds: { ...current.protectedIds || {}, ...cloudData.protectedIds || {} },
+              ...hasCloud ? cloudData : {},
+              lang: (hasShared && (sharedData.lang === "en" || sharedData.lang === "es") ? sharedData.lang : null) || (hasCloud && (cloudData.lang === "en" || cloudData.lang === "es") ? cloudData.lang : null) || current.lang,
+              folders: mergedFolders,
+              prompts: mergedPrompts,
+              assignments: { ...current.assignments || {}, ...hasCloud ? cloudData.assignments || {} : {} },
+              protectedIds: { ...current.protectedIds || {}, ...hasCloud ? cloudData.protectedIds || {} : {} },
               pos: current.pos,
               toolbarPos: current.toolbarPos,
               view: current.view
@@ -858,6 +1055,14 @@
             const merged = normalizeStoredState(mergedRaw, current.lang);
             const { pos: _pos, toolbarPos: _toolbarPos, view: _view, ...syncPayload } = merged;
             lastSelfWrittenSyncJson = buildQuotaSafeSyncPayload(syncPayload).json;
+            if (hasShared) {
+              lastSelfWrittenSharedContentJson = sharedContentSignature({
+                folders: merged.folders,
+                prompts: merged.prompts,
+                lang: merged.lang,
+                themePreset: sharedData.themePreset || getCurrentThemePreset()
+              });
+            }
             localStorage.setItem(P.storageKey, JSON.stringify(merged));
             applyIncoming(merged);
           } else {
@@ -868,22 +1073,62 @@
       });
       if (chrome.storage.onChanged?.addListener) {
         chrome.storage.onChanged.addListener((changes, area) => {
-          if (area !== "sync" || !changes[P.storageKey]?.newValue) return;
+          if (area !== "sync") return;
+          const platformChange = changes[P.storageKey]?.newValue;
+          const sharedChange = changes[SHARED_CONFIG_KEY]?.newValue;
+          if (!platformChange && !sharedChange) return;
           try {
-            const incomingVal = changes[P.storageKey].newValue;
-            const incomingJson = JSON.stringify(incomingVal);
-            if (incomingJson === lastSelfWrittenSyncJson) return;
             const current = getState();
-            const merged = normalizeStoredState(
-              {
-                ...incomingVal,
-                pos: current.pos,
-                toolbarPos: current.toolbarPos,
-                view: current.view
-              },
-              current.lang
-            );
-            lastSelfWrittenSyncJson = incomingJson;
+            let nextRaw = { ...current };
+            let changed = false;
+            if (platformChange && typeof platformChange === "object") {
+              const incomingJson = JSON.stringify(platformChange);
+              if (incomingJson !== lastSelfWrittenSyncJson) {
+                lastSelfWrittenSyncJson = incomingJson;
+                nextRaw = {
+                  ...platformChange,
+                  pos: current.pos,
+                  toolbarPos: current.toolbarPos,
+                  view: current.view
+                };
+                changed = true;
+              }
+            }
+            if (sharedChange && typeof sharedChange === "object") {
+              const incomingSharedJson = JSON.stringify(sharedChange);
+              if (incomingSharedJson !== lastSelfWrittenSharedJson) {
+                lastSelfWrittenSharedJson = incomingSharedJson;
+                if (sharedChange.themePreset) {
+                  const normalizedTheme = applyThemePreset(sharedChange.themePreset, { persist: false });
+                  try {
+                    if (typeof localStorage !== "undefined") {
+                      localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+                    }
+                  } catch (_) {
+                  }
+                }
+                nextRaw = {
+                  ...nextRaw,
+                  folders: Array.isArray(sharedChange.folders) ? sharedChange.folders : nextRaw.folders,
+                  prompts: Array.isArray(sharedChange.prompts) ? sharedChange.prompts : nextRaw.prompts,
+                  lang: sharedChange.lang === "en" || sharedChange.lang === "es" ? sharedChange.lang : nextRaw.lang,
+                  assignments: nextRaw.assignments,
+                  protectedIds: nextRaw.protectedIds,
+                  pos: current.pos,
+                  toolbarPos: current.toolbarPos,
+                  view: current.view
+                };
+                lastSelfWrittenSharedContentJson = sharedContentSignature({
+                  folders: nextRaw.folders,
+                  prompts: nextRaw.prompts,
+                  lang: nextRaw.lang,
+                  themePreset: sharedChange.themePreset || getCurrentThemePreset()
+                });
+                changed = true;
+              }
+            }
+            if (!changed) return;
+            const merged = normalizeStoredState(nextRaw, current.lang);
             localStorage.setItem(P.storageKey, JSON.stringify(merged));
             applyIncoming(merged);
           } catch (_) {
@@ -1600,6 +1845,96 @@
       }, autoHideMs);
     }
   }
+  function openPromptVarsModal(promptTitle, variables) {
+    return new Promise((resolve) => {
+      const existing = document.getElementById("gcm-modal-overlay");
+      if (existing) {
+        existing._gcmClose?.(null);
+        existing.remove();
+      }
+      const overlay = document.createElement("div");
+      overlay.id = "gcm-modal-overlay";
+      const card = document.createElement("div");
+      card.className = "gcm-modal-card gcm-var-modal";
+      card.setAttribute("role", "dialog");
+      card.setAttribute("aria-modal", "true");
+      const title = document.createElement("div");
+      title.className = "gcm-modal-title";
+      title.textContent = t().varModalTitle;
+      const desc = document.createElement("div");
+      desc.className = "gcm-modal-desc";
+      desc.textContent = t().varModalDesc(promptTitle);
+      const fieldsWrap = document.createElement("div");
+      fieldsWrap.className = "gcm-var-fields";
+      const inputs = variables.map((varName, idx) => {
+        const field = document.createElement("div");
+        field.className = "gcm-var-field";
+        const label = document.createElement("label");
+        label.className = "gcm-var-label";
+        label.htmlFor = `gcm-var-input-${idx}`;
+        label.textContent = varName;
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "gcm-modal-input gcm-var-input";
+        input.id = `gcm-var-input-${idx}`;
+        input.placeholder = t().varInputPlaceholder(varName);
+        input.dataset.var = varName;
+        field.append(label, input);
+        fieldsWrap.appendChild(field);
+        return input;
+      });
+      const actions = document.createElement("div");
+      actions.className = "gcm-modal-actions";
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "gcm-btn gcm-btn-cancel";
+      cancelBtn.textContent = t().cancel;
+      const submitBtn = document.createElement("button");
+      submitBtn.type = "button";
+      submitBtn.className = "gcm-btn gcm-btn-stop";
+      submitBtn.textContent = t().varInsertBtn;
+      let settled = false;
+      const close = (result) => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener("keydown", onEsc);
+        overlay.remove();
+        resolve(result);
+      };
+      overlay._gcmClose = close;
+      const handleSubmit = () => {
+        const values = {};
+        for (const input of inputs) {
+          values[input.dataset.var] = input.value;
+        }
+        close(values);
+      };
+      function onEsc(e) {
+        if (e.key === "Escape") {
+          close(null);
+        }
+      }
+      document.addEventListener("keydown", onEsc);
+      for (const input of inputs) {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleSubmit();
+          }
+        });
+      }
+      cancelBtn.addEventListener("click", () => close(null));
+      submitBtn.addEventListener("click", handleSubmit);
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) close(null);
+      });
+      actions.append(cancelBtn, submitBtn);
+      card.append(title, desc, fieldsWrap, actions);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+      setTimeout(() => inputs[0]?.focus(), 40);
+    });
+  }
 
   // src/utils.js
   var sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1830,6 +2165,23 @@
   }
 
   // src/prompts.js
+  var VAR_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;
+  function extractPromptVariables(text) {
+    if (typeof text !== "string" || !text.includes("{{")) return [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const match of text.matchAll(VAR_PATTERN)) {
+      const name = match[1].trim();
+      if (name) seen.add(name);
+    }
+    return [...seen];
+  }
+  function substitutePromptVariables(text, values = {}) {
+    if (typeof text !== "string" || !values) return text;
+    return text.replace(VAR_PATTERN, (full, rawName) => {
+      const key = rawName.trim();
+      return Object.hasOwn(values, key) ? String(values[key]) : full;
+    });
+  }
   function insertPromptIntoChat(text) {
     const input = document.querySelector(SELECTORS.promptInput);
     if (!input) {
@@ -1888,7 +2240,7 @@ ${text}` : text;
       existing.remove();
     }
     if (!Array.isArray(state.folderState.prompts)) {
-      state.folderState.prompts = t().defaultPrompts.map((p) => ({ ...p }));
+      state.folderState.prompts = structuredClone(t().defaultPrompts);
     }
     const isEs = state.folderState.lang === "es";
     let filterQuery = "";
@@ -2043,15 +2395,24 @@ ${text}` : text;
           e.stopPropagation();
           openDrawer(p);
         });
+        const handleUse = async (e) => {
+          e?.stopPropagation();
+          const vars = extractPromptVariables(p.content);
+          closeModal();
+          if (vars.length === 0) {
+            insertPromptIntoChat(p.content);
+            return;
+          }
+          const values = await openPromptVarsModal(p.title, vars);
+          if (values) {
+            insertPromptIntoChat(substitutePromptVariables(p.content, values));
+          }
+        };
         const useBtn = document.createElement("button");
         useBtn.type = "button";
         useBtn.className = "gcm-btn gcm-btn-stop gcm-prompt-use-btn";
         useBtn.textContent = `${t().insertPromptBtn} ↵`;
-        useBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          closeModal();
-          insertPromptIntoChat(p.content);
-        });
+        useBtn.addEventListener("click", handleUse);
         const delBtn = document.createElement("button");
         delBtn.type = "button";
         delBtn.className = "gcm-prompt-icon-btn gcm-prompt-del-btn";
@@ -2067,15 +2428,11 @@ ${text}` : text;
         itemActions.appendChild(editBtn);
         itemActions.appendChild(useBtn);
         itemActions.appendChild(delBtn);
-        item.addEventListener("click", () => {
-          closeModal();
-          insertPromptIntoChat(p.content);
-        });
+        item.addEventListener("click", handleUse);
         item.addEventListener("keydown", (e) => {
           if (e.target === item && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
-            closeModal();
-            insertPromptIntoChat(p.content);
+            handleUse(e);
           }
         });
         item.appendChild(info);
@@ -2702,313 +3059,6 @@ ${text}
     updateStatusToast(t().toastMdExported, null, null, 3e3);
   }
 
-  // src/selection.js
-  function toggleProtectSelected() {
-    const ids = Array.from(selectedMap.keys());
-    if (ids.length === 0) return;
-    const allAlreadyProtected = ids.every((id) => !!state.folderState.protectedIds[id]);
-    ids.forEach((id) => {
-      if (allAlreadyProtected) {
-        delete state.folderState.protectedIds[id];
-      } else {
-        state.folderState.protectedIds[id] = true;
-      }
-    });
-    saveFolderData(state.folderState);
-    clearAllSelections();
-    refreshUI();
-    updateStatusToast(
-      allAlreadyProtected ? t().toastUnprotected(ids.length) : t().toastProtected(ids.length),
-      null,
-      null,
-      3e3
-    );
-  }
-  function clearAllSelections() {
-    state.autoSelectAllMode = false;
-    selectedMap.clear();
-    const sidebar = getSidebarElement() || document;
-    sidebar.querySelectorAll(".gcm-checkbox").forEach((cb) => {
-      cb.checked = false;
-      cb.classList.remove("gcm-checked");
-    });
-    sidebar.querySelectorAll(".gcm-chat-row.gcm-selected").forEach((r) => r.classList.remove("gcm-selected"));
-    const selectAllCb = document.getElementById("gcm-select-all");
-    if (selectAllCb) {
-      selectAllCb.checked = false;
-      selectAllCb.classList.remove("gcm-checked");
-    }
-  }
-  function toggleMoveToFolderPopover(anchorBtn) {
-    const existing = document.getElementById("gcm-folder-popover");
-    if (existing) {
-      existing.remove();
-      return;
-    }
-    const rect = anchorBtn.getBoundingClientRect();
-    const popover = document.createElement("div");
-    popover.id = "gcm-folder-popover";
-    popover.setAttribute("role", "menu");
-    popover.style.top = `${rect.bottom + 8}px`;
-    popover.style.left = `${Math.max(12, rect.left - 30)}px`;
-    const closePopover = () => {
-      popover.remove();
-      document.removeEventListener("mousedown", closeOnOutside);
-      document.removeEventListener("keydown", closeOnEsc);
-    };
-    state.folderState.folders.forEach((f) => {
-      const item = document.createElement("button");
-      item.className = "gcm-popover-item";
-      item.setAttribute("role", "menuitem");
-      const dot = document.createElement("span");
-      dot.className = "gcm-folder-dot";
-      dot.style.backgroundColor = f.color;
-      dot.style.color = f.color;
-      const txt = document.createElement("span");
-      txt.textContent = f.name;
-      item.appendChild(dot);
-      item.appendChild(txt);
-      item.addEventListener("click", () => {
-        assignSelectedToFolder(f.id);
-        closePopover();
-      });
-      popover.appendChild(item);
-    });
-    const divider = document.createElement("div");
-    divider.className = "gcm-popover-divider";
-    popover.appendChild(divider);
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "gcm-popover-item";
-    removeBtn.setAttribute("role", "menuitem");
-    setButtonIconText(removeBtn, ICONS.folderMinus, t().removeFromFolder);
-    removeBtn.addEventListener("click", () => {
-      assignSelectedToFolder(null);
-      closePopover();
-    });
-    popover.appendChild(removeBtn);
-    const createNewBtn = document.createElement("button");
-    createNewBtn.className = "gcm-popover-item gcm-popover-item-accent";
-    createNewBtn.setAttribute("role", "menuitem");
-    setButtonIconText(createNewBtn, ICONS.folderPlus, t().createNewFolderMenu);
-    createNewBtn.addEventListener("click", () => {
-      closePopover();
-      openCreateFolderModal((newFolder) => {
-        assignSelectedToFolder(newFolder.id);
-      });
-    });
-    popover.appendChild(createNewBtn);
-    document.body.appendChild(popover);
-    const popRect = popover.getBoundingClientRect();
-    const clampedLeft = Math.min(Math.max(12, rect.left - 30), Math.max(12, window.innerWidth - popRect.width - 12));
-    const preferTop = rect.bottom + 8 + popRect.height > window.innerHeight - 12 && rect.top - popRect.height - 8 >= 12 ? rect.top - popRect.height - 8 : Math.min(rect.bottom + 8, Math.max(12, window.innerHeight - popRect.height - 12));
-    popover.style.left = `${clampedLeft}px`;
-    popover.style.top = `${preferTop}px`;
-    const closeOnOutside = (e) => {
-      if (!popover.contains(e.target) && e.target !== anchorBtn) {
-        closePopover();
-      }
-    };
-    const closeOnEsc = (e) => {
-      if (e.key === "Escape") {
-        closePopover();
-      }
-    };
-    document.addEventListener("keydown", closeOnEsc);
-    setTimeout(() => document.addEventListener("mousedown", closeOnOutside), 20);
-  }
-  function assignSelectedToFolder(folderId) {
-    const ids = Array.from(selectedMap.keys());
-    if (ids.length === 0) return;
-    ids.forEach((convId) => {
-      if (folderId) {
-        state.folderState.assignments[convId] = folderId;
-      } else {
-        delete state.folderState.assignments[convId];
-      }
-    });
-    saveFolderData(state.folderState);
-    clearAllSelections();
-    refreshUI();
-    updateStatusToast(
-      folderId ? t().toastMovedToFolder(ids.length) : t().toastRemovedFromFolder(ids.length),
-      null,
-      null,
-      2500
-    );
-  }
-  function setupDelegatedSidebarListener() {
-    if (state.delegatedListenerAttached) return;
-    state.delegatedListenerAttached = true;
-    const stopPressOnControls = (e) => {
-      const target = e.target;
-      if (!(target instanceof Element)) return;
-      if (target.classList.contains("gcm-checkbox") || target.closest(".gcm-lock-icon")) {
-        e.stopPropagation();
-        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
-        if (e.type === "mousedown" && target.id !== "gcm-select-all") {
-          e.preventDefault();
-        }
-      }
-    };
-    document.addEventListener("pointerdown", stopPressOnControls, true);
-    document.addEventListener("mousedown", stopPressOnControls, true);
-    document.addEventListener("pointerup", stopPressOnControls, true);
-    document.addEventListener("mouseup", stopPressOnControls, true);
-    document.addEventListener(
-      "click",
-      (e) => {
-        const target = e.target;
-        if (!(target instanceof Element)) return;
-        const lockTarget = target.closest(".gcm-lock-icon");
-        if (lockTarget) {
-          e.stopPropagation();
-          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
-          e.preventDefault();
-          const id = lockTarget.dataset.convId;
-          if (id) {
-            delete state.folderState.protectedIds[id];
-            saveFolderData(state.folderState);
-            refreshUI();
-            updateStatusToast(t().toastUnprotected(1), null, null, 2500);
-          }
-          return;
-        }
-        if (target.classList.contains("gcm-checkbox") && target.id !== "gcm-select-all") {
-          e.preventDefault();
-          e.stopPropagation();
-          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
-          const checkbox = target;
-          const id = checkbox.dataset.convId;
-          const row = checkbox.closest(".gcm-chat-row") || checkbox.parentElement;
-          if (!id || !row) return;
-          const willBeChecked = !selectedMap.has(id);
-          if (!willBeChecked) {
-            state.autoSelectAllMode = false;
-            if (state.autoScrollActive) state.autoScrollActive = false;
-          }
-          const applyCbState = (cb, r, cbId, isChecked) => {
-            cb.checked = isChecked;
-            cb.classList.toggle("gcm-checked", isChecked);
-            if (isChecked) {
-              selectedMap.set(cbId, { id: cbId, title: r.textContent?.trim() || cbId });
-              r.classList.add("gcm-selected");
-            } else {
-              selectedMap.delete(cbId);
-              r.classList.remove("gcm-selected");
-            }
-          };
-          const sidebar = getSidebarElement() || document;
-          const visibleCheckboxes = Array.from(
-            sidebar.querySelectorAll(".gcm-checkbox:not(#gcm-select-all)")
-          ).filter((cb) => {
-            const r = cb.closest(".gcm-chat-row") || cb.parentElement;
-            return r && !r.classList.contains("gcm-hidden-by-filter");
-          });
-          const anchorId = state.lastCheckedConvId || state.lastCheckedCheckbox?.dataset?.convId;
-          if (e.shiftKey && anchorId && anchorId !== id) {
-            const start = visibleCheckboxes.findIndex((cb) => cb.dataset.convId === anchorId);
-            const end = visibleCheckboxes.findIndex((cb) => cb === checkbox || cb.dataset.convId === id);
-            if (start !== -1 && end !== -1) {
-              const [low, high] = [Math.min(start, end), Math.max(start, end)];
-              for (let i = low; i <= high; i++) {
-                const cb = visibleCheckboxes[i];
-                const cbId = cb.dataset.convId;
-                const cbRow = cb.closest(".gcm-chat-row") || cb.parentElement;
-                if (cbId && cbRow) {
-                  applyCbState(cb, cbRow, cbId, willBeChecked);
-                }
-              }
-            } else {
-              applyCbState(checkbox, row, id, willBeChecked);
-            }
-          } else {
-            applyCbState(checkbox, row, id, willBeChecked);
-          }
-          const syncNativeChecked = () => {
-            visibleCheckboxes.forEach((cb) => {
-              const cbId = cb.dataset.convId;
-              if (cbId) {
-                const st = selectedMap.has(cbId);
-                cb.checked = st;
-                cb.classList.toggle("gcm-checked", st);
-              }
-            });
-          };
-          if (typeof queueMicrotask === "function") queueMicrotask(syncNativeChecked);
-          setTimeout(syncNativeChecked, 0);
-          state.lastCheckedCheckbox = checkbox;
-          state.lastCheckedConvId = id;
-          updateToolbarState();
-        }
-      },
-      true
-    );
-  }
-  function injectCheckboxes(items) {
-    for (let i = 0; i < items.length; i++) {
-      const { id, row, title } = items[i];
-      if (!row.classList.contains("gcm-chat-row")) {
-        row.classList.add("gcm-chat-row");
-      }
-      if (state.autoSelectAllMode && !row.classList.contains("gcm-hidden-by-filter") && !selectedMap.has(id)) {
-        selectedMap.set(id, { id, title: title || row.textContent?.trim() || id });
-      }
-      const isSelected = selectedMap.has(id);
-      const existingCb = row.querySelector(".gcm-checkbox");
-      if (existingCb) {
-        if (existingCb.dataset.convId !== id) existingCb.dataset.convId = id;
-        if (existingCb.checked !== isSelected) existingCb.checked = isSelected;
-        existingCb.classList.toggle("gcm-checked", isSelected);
-        row.classList.toggle("gcm-selected", isSelected);
-        continue;
-      }
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.className = "gcm-checkbox" + (isSelected ? " gcm-checked" : "");
-      checkbox.title = t().checkboxTitle;
-      checkbox.dataset.convId = id;
-      checkbox.checked = isSelected;
-      row.classList.toggle("gcm-selected", isSelected);
-      row.prepend(checkbox);
-    }
-  }
-  function toggleSelectAll(checked) {
-    if (!checked) {
-      clearAllSelections();
-      updateToolbarState();
-      if (state.autoScrollActive) {
-        state.autoScrollActive = false;
-        refreshUI();
-      }
-      return;
-    }
-    state.autoSelectAllMode = true;
-    const selectAllCb = document.getElementById("gcm-select-all");
-    if (selectAllCb) {
-      selectAllCb.checked = true;
-      selectAllCb.classList.add("gcm-checked");
-    }
-    const sidebar = getSidebarElement() || document;
-    const checkboxes = Array.from(sidebar.querySelectorAll(".gcm-checkbox:not(#gcm-select-all)")).filter((cb) => {
-      const r = cb.closest(".gcm-chat-row") || cb.parentElement;
-      return r && !r.classList.contains("gcm-hidden-by-filter");
-    });
-    checkboxes.forEach((cb) => {
-      cb.checked = true;
-      cb.classList.add("gcm-checked");
-      const id = cb.dataset.convId;
-      const row = cb.closest(".gcm-chat-row") || cb.parentElement;
-      if (id && row) {
-        selectedMap.set(id, { id, title: row.textContent?.trim() || id });
-        row.classList.add("gcm-selected");
-      }
-    });
-    updateToolbarState();
-    if (!state.autoScrollActive) {
-      toggleAutoScrollHistory({ silent: true });
-    }
-  }
-
   // src/toolbar.js
   function appendButtonWithKbd(btn, iconBuilder, labelText, kbdText = null) {
     setButtonIconText(btn, iconBuilder, labelText);
@@ -3325,6 +3375,433 @@ ${text}
     }
   }
 
+  // src/selection.js
+  function toggleProtectSelected() {
+    const ids = Array.from(selectedMap.keys());
+    if (ids.length === 0) return;
+    const allAlreadyProtected = ids.every((id) => !!state.folderState.protectedIds[id]);
+    ids.forEach((id) => {
+      if (allAlreadyProtected) {
+        delete state.folderState.protectedIds[id];
+      } else {
+        state.folderState.protectedIds[id] = true;
+      }
+    });
+    saveFolderData(state.folderState);
+    clearAllSelections();
+    refreshUI();
+    updateStatusToast(
+      allAlreadyProtected ? t().toastUnprotected(ids.length) : t().toastProtected(ids.length),
+      null,
+      null,
+      3e3
+    );
+  }
+  function clearAllSelections() {
+    state.autoSelectAllMode = false;
+    selectedMap.clear();
+    const sidebar = getSidebarElement() || document;
+    sidebar.querySelectorAll(".gcm-checkbox").forEach((cb) => {
+      cb.checked = false;
+      cb.classList.remove("gcm-checked");
+    });
+    sidebar.querySelectorAll(".gcm-chat-row.gcm-selected").forEach((r) => r.classList.remove("gcm-selected"));
+    const selectAllCb = document.getElementById("gcm-select-all");
+    if (selectAllCb) {
+      selectAllCb.checked = false;
+      selectAllCb.classList.remove("gcm-checked");
+    }
+  }
+  function toggleMoveToFolderPopover(anchorBtn) {
+    const existing = document.getElementById("gcm-folder-popover");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const rect = anchorBtn.getBoundingClientRect();
+    const popover = document.createElement("div");
+    popover.id = "gcm-folder-popover";
+    popover.setAttribute("role", "menu");
+    popover.style.top = `${rect.bottom + 8}px`;
+    popover.style.left = `${Math.max(12, rect.left - 30)}px`;
+    const closePopover = () => {
+      popover.remove();
+      document.removeEventListener("mousedown", closeOnOutside);
+      document.removeEventListener("keydown", closeOnEsc);
+    };
+    state.folderState.folders.forEach((f) => {
+      const item = document.createElement("button");
+      item.className = "gcm-popover-item";
+      item.setAttribute("role", "menuitem");
+      const dot = document.createElement("span");
+      dot.className = "gcm-folder-dot";
+      dot.style.backgroundColor = f.color;
+      dot.style.color = f.color;
+      const txt = document.createElement("span");
+      txt.textContent = f.name;
+      item.appendChild(dot);
+      item.appendChild(txt);
+      item.addEventListener("click", () => {
+        assignSelectedToFolder(f.id);
+        closePopover();
+      });
+      popover.appendChild(item);
+    });
+    const divider = document.createElement("div");
+    divider.className = "gcm-popover-divider";
+    popover.appendChild(divider);
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "gcm-popover-item";
+    removeBtn.setAttribute("role", "menuitem");
+    setButtonIconText(removeBtn, ICONS.folderMinus, t().removeFromFolder);
+    removeBtn.addEventListener("click", () => {
+      assignSelectedToFolder(null);
+      closePopover();
+    });
+    popover.appendChild(removeBtn);
+    const createNewBtn = document.createElement("button");
+    createNewBtn.className = "gcm-popover-item gcm-popover-item-accent";
+    createNewBtn.setAttribute("role", "menuitem");
+    setButtonIconText(createNewBtn, ICONS.folderPlus, t().createNewFolderMenu);
+    createNewBtn.addEventListener("click", () => {
+      closePopover();
+      openCreateFolderModal((newFolder) => {
+        assignSelectedToFolder(newFolder.id);
+      });
+    });
+    popover.appendChild(createNewBtn);
+    document.body.appendChild(popover);
+    const popRect = popover.getBoundingClientRect();
+    const clampedLeft = Math.min(Math.max(12, rect.left - 30), Math.max(12, window.innerWidth - popRect.width - 12));
+    const preferTop = rect.bottom + 8 + popRect.height > window.innerHeight - 12 && rect.top - popRect.height - 8 >= 12 ? rect.top - popRect.height - 8 : Math.min(rect.bottom + 8, Math.max(12, window.innerHeight - popRect.height - 12));
+    popover.style.left = `${clampedLeft}px`;
+    popover.style.top = `${preferTop}px`;
+    const closeOnOutside = (e) => {
+      if (!popover.contains(e.target) && e.target !== anchorBtn) {
+        closePopover();
+      }
+    };
+    const closeOnEsc = (e) => {
+      if (e.key === "Escape") {
+        closePopover();
+      }
+    };
+    document.addEventListener("keydown", closeOnEsc);
+    setTimeout(() => document.addEventListener("mousedown", closeOnOutside), 20);
+  }
+  function assignSelectedToFolder(folderId) {
+    const ids = Array.from(selectedMap.keys());
+    if (ids.length === 0) return;
+    ids.forEach((convId) => {
+      if (folderId) {
+        state.folderState.assignments[convId] = folderId;
+      } else {
+        delete state.folderState.assignments[convId];
+      }
+    });
+    saveFolderData(state.folderState);
+    clearAllSelections();
+    refreshUI();
+    updateStatusToast(
+      folderId ? t().toastMovedToFolder(ids.length) : t().toastRemovedFromFolder(ids.length),
+      null,
+      null,
+      2500
+    );
+  }
+  function assignChatToFolderWithUndo(convId, nextFolderId, onUndo = null) {
+    if (!convId) return false;
+    const normalizedNext = nextFolderId || null;
+    const prevFolderId = state.folderState.assignments[convId] ?? null;
+    if (prevFolderId === normalizedNext) return false;
+    if (normalizedNext) {
+      state.folderState.assignments[convId] = normalizedNext;
+    } else {
+      delete state.folderState.assignments[convId];
+    }
+    saveFolderData(state.folderState);
+    refreshUI();
+    const message = normalizedNext ? t().toastMovedToFolder(1) : t().toastRemovedFromFolder(1);
+    showUndoToast(message, () => {
+      if (prevFolderId) {
+        state.folderState.assignments[convId] = prevFolderId;
+      } else {
+        delete state.folderState.assignments[convId];
+      }
+      saveFolderData(state.folderState);
+      refreshUI();
+      onUndo?.(convId, prevFolderId);
+      updateStatusToast(
+        t().toastAssignmentUndone ?? (state.folderState.lang === "es" ? "↩️ Asignación revertida." : "↩️ Assignment reverted."),
+        null,
+        null,
+        2500
+      );
+    });
+    return true;
+  }
+  var activeUndoController = null;
+  var activeUndoTimer = null;
+  function showUndoToast(message, onUndo, durationMs = 5e3) {
+    activeUndoController?.abort();
+    if (activeUndoTimer) {
+      clearTimeout(activeUndoTimer);
+      activeUndoTimer = null;
+    }
+    document.querySelectorAll(".gcm-toast-undo").forEach((el2) => el2.remove());
+    const controller = new AbortController();
+    activeUndoController = controller;
+    const { signal } = controller;
+    const toast = document.createElement("div");
+    toast.className = "gcm-toast-undo";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    const msgEl = document.createElement("span");
+    msgEl.className = "gcm-toast-undo-msg";
+    msgEl.textContent = message;
+    const undoBtn = document.createElement("button");
+    undoBtn.type = "button";
+    undoBtn.className = "gcm-toast-undo-btn";
+    undoBtn.textContent = t().undoBtn ?? (state.folderState.lang === "es" ? "Deshacer" : "Undo");
+    const progress = document.createElement("div");
+    progress.className = "gcm-toast-progress";
+    const dismiss = () => {
+      controller.abort();
+      if (activeUndoTimer) {
+        clearTimeout(activeUndoTimer);
+        activeUndoTimer = null;
+      }
+      if (activeUndoController === controller) activeUndoController = null;
+      toast.remove();
+    };
+    undoBtn.addEventListener(
+      "click",
+      () => {
+        dismiss();
+        onUndo?.();
+      },
+      { signal }
+    );
+    toast.append(msgEl, undoBtn, progress);
+    document.body.appendChild(toast);
+    activeUndoTimer = setTimeout(dismiss, durationMs);
+  }
+  var activeDragConvId = null;
+  var getDraggingConvId = () => activeDragConvId;
+  var delegatedListenerController = null;
+  function setupDelegatedSidebarListener() {
+    if (state.delegatedListenerAttached) return;
+    state.delegatedListenerAttached = true;
+    delegatedListenerController?.abort();
+    delegatedListenerController = new AbortController();
+    const { signal } = delegatedListenerController;
+    const stopPressOnControls = (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (target.classList.contains("gcm-checkbox") || target.closest(".gcm-lock-icon")) {
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+        if (e.type === "mousedown" && target.id !== "gcm-select-all") {
+          e.preventDefault();
+        }
+      }
+    };
+    document.addEventListener("pointerdown", stopPressOnControls, { capture: true, signal });
+    document.addEventListener("mousedown", stopPressOnControls, { capture: true, signal });
+    document.addEventListener("pointerup", stopPressOnControls, { capture: true, signal });
+    document.addEventListener("mouseup", stopPressOnControls, { capture: true, signal });
+    document.addEventListener(
+      "dragstart",
+      (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest("input, button, .gcm-checkbox, .gcm-lock-icon")) {
+          e.preventDefault();
+          return;
+        }
+        const row = target.closest(".gcm-chat-row");
+        const convId = row?.dataset?.gcmConvId ?? row?.querySelector(".gcm-checkbox")?.dataset?.convId;
+        if (!row || !convId) return;
+        activeDragConvId = convId;
+        row.classList.add("gcm-dragging");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("application/x-gcm-conv-id", convId);
+          e.dataTransfer.setData("text/plain", convId);
+        }
+      },
+      { capture: true, signal }
+    );
+    document.addEventListener(
+      "dragend",
+      () => {
+        activeDragConvId = null;
+        document.querySelectorAll(".gcm-chat-row.gcm-dragging").forEach((el2) => el2.classList.remove("gcm-dragging"));
+        document.querySelectorAll(".gcm-folder-pill.gcm-drop-active").forEach((el2) => el2.classList.remove("gcm-drop-active"));
+      },
+      { capture: true, signal }
+    );
+    document.addEventListener(
+      "click",
+      (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        const lockTarget = target.closest(".gcm-lock-icon");
+        if (lockTarget) {
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+          e.preventDefault();
+          const id = lockTarget.dataset.convId;
+          if (id) {
+            delete state.folderState.protectedIds[id];
+            saveFolderData(state.folderState);
+            refreshUI();
+            updateStatusToast(t().toastUnprotected(1), null, null, 2500);
+          }
+          return;
+        }
+        if (target.classList.contains("gcm-checkbox") && target.id !== "gcm-select-all") {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+          const checkbox = target;
+          const id = checkbox.dataset.convId;
+          const row = checkbox.closest(".gcm-chat-row") || checkbox.parentElement;
+          if (!id || !row) return;
+          const willBeChecked = !selectedMap.has(id);
+          if (!willBeChecked) {
+            state.autoSelectAllMode = false;
+            if (state.autoScrollActive) state.autoScrollActive = false;
+          }
+          const applyCbState = (cb, r, cbId, isChecked) => {
+            cb.checked = isChecked;
+            cb.classList.toggle("gcm-checked", isChecked);
+            if (isChecked) {
+              selectedMap.set(cbId, { id: cbId, title: r.textContent?.trim() || cbId });
+              r.classList.add("gcm-selected");
+            } else {
+              selectedMap.delete(cbId);
+              r.classList.remove("gcm-selected");
+            }
+          };
+          const sidebar = getSidebarElement() || document;
+          const visibleCheckboxes = Array.from(
+            sidebar.querySelectorAll(".gcm-checkbox:not(#gcm-select-all)")
+          ).filter((cb) => {
+            const r = cb.closest(".gcm-chat-row") || cb.parentElement;
+            return r && !r.classList.contains("gcm-hidden-by-filter");
+          });
+          const anchorId = state.lastCheckedConvId || state.lastCheckedCheckbox?.dataset?.convId;
+          if (e.shiftKey && anchorId && anchorId !== id) {
+            const start = visibleCheckboxes.findIndex((cb) => cb.dataset.convId === anchorId);
+            const end = visibleCheckboxes.findIndex((cb) => cb === checkbox || cb.dataset.convId === id);
+            if (start !== -1 && end !== -1) {
+              const [low, high] = [Math.min(start, end), Math.max(start, end)];
+              for (let i = low; i <= high; i++) {
+                const cb = visibleCheckboxes[i];
+                const cbId = cb.dataset.convId;
+                const cbRow = cb.closest(".gcm-chat-row") || cb.parentElement;
+                if (cbId && cbRow) {
+                  applyCbState(cb, cbRow, cbId, willBeChecked);
+                }
+              }
+            } else {
+              applyCbState(checkbox, row, id, willBeChecked);
+            }
+          } else {
+            applyCbState(checkbox, row, id, willBeChecked);
+          }
+          const syncNativeChecked = () => {
+            visibleCheckboxes.forEach((cb) => {
+              const cbId = cb.dataset.convId;
+              if (cbId) {
+                const st = selectedMap.has(cbId);
+                cb.checked = st;
+                cb.classList.toggle("gcm-checked", st);
+              }
+            });
+          };
+          if (typeof queueMicrotask === "function") queueMicrotask(syncNativeChecked);
+          setTimeout(syncNativeChecked, 0);
+          state.lastCheckedCheckbox = checkbox;
+          state.lastCheckedConvId = id;
+          updateToolbarState();
+        }
+      },
+      { capture: true, signal }
+    );
+  }
+  function injectCheckboxes(items) {
+    for (let i = 0; i < items.length; i++) {
+      const { id, row, title } = items[i];
+      if (!row.classList.contains("gcm-chat-row")) {
+        row.classList.add("gcm-chat-row");
+      }
+      if (!row.draggable) {
+        row.draggable = true;
+      }
+      if (row.dataset.gcmConvId !== id) {
+        row.dataset.gcmConvId = id;
+      }
+      if (state.autoSelectAllMode && !row.classList.contains("gcm-hidden-by-filter") && !selectedMap.has(id)) {
+        selectedMap.set(id, { id, title: title || row.textContent?.trim() || id });
+      }
+      const isSelected = selectedMap.has(id);
+      const existingCb = row.querySelector(".gcm-checkbox");
+      if (existingCb) {
+        if (existingCb.dataset.convId !== id) existingCb.dataset.convId = id;
+        if (existingCb.checked !== isSelected) existingCb.checked = isSelected;
+        existingCb.classList.toggle("gcm-checked", isSelected);
+        row.classList.toggle("gcm-selected", isSelected);
+        continue;
+      }
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "gcm-checkbox" + (isSelected ? " gcm-checked" : "");
+      checkbox.title = t().checkboxTitle;
+      checkbox.dataset.convId = id;
+      checkbox.checked = isSelected;
+      row.classList.toggle("gcm-selected", isSelected);
+      row.prepend(checkbox);
+    }
+  }
+  function toggleSelectAll(checked) {
+    if (!checked) {
+      clearAllSelections();
+      updateToolbarState();
+      if (state.autoScrollActive) {
+        state.autoScrollActive = false;
+        refreshUI();
+      }
+      return;
+    }
+    state.autoSelectAllMode = true;
+    const selectAllCb = document.getElementById("gcm-select-all");
+    if (selectAllCb) {
+      selectAllCb.checked = true;
+      selectAllCb.classList.add("gcm-checked");
+    }
+    const sidebar = getSidebarElement() || document;
+    const checkboxes = Array.from(sidebar.querySelectorAll(".gcm-checkbox:not(#gcm-select-all)")).filter((cb) => {
+      const r = cb.closest(".gcm-chat-row") || cb.parentElement;
+      return r && !r.classList.contains("gcm-hidden-by-filter");
+    });
+    checkboxes.forEach((cb) => {
+      cb.checked = true;
+      cb.classList.add("gcm-checked");
+      const id = cb.dataset.convId;
+      const row = cb.closest(".gcm-chat-row") || cb.parentElement;
+      if (id && row) {
+        selectedMap.set(id, { id, title: row.textContent?.trim() || id });
+        row.classList.add("gcm-selected");
+      }
+    });
+    updateToolbarState();
+    if (!state.autoScrollActive) {
+      toggleAutoScrollHistory({ silent: true });
+    }
+  }
+
   // src/panel.js
   function setAppLanguage(nextLang) {
     const normalized = nextLang === "en" || nextLang === "es" ? nextLang : state.folderState.lang === "es" ? "en" : "es";
@@ -3569,7 +4046,7 @@ ${text}
           saveFolderData(state.folderState);
           refreshUI();
         }
-        const input = document.querySelector("#gcm-folders-box .gcm-search-input");
+        const input = document.getElementById("gcm-search-input") ?? document.querySelector("#gcm-folders-box .gcm-search-input");
         input?.focus();
         input?.select();
       }
@@ -3661,8 +4138,10 @@ ${text}
     searchIcon.classList.add("gcm-search-lead-icon");
     const searchInput = document.createElement("input");
     searchInput.type = "text";
+    searchInput.id = "gcm-search-input";
     searchInput.className = "gcm-search-input";
     searchInput.placeholder = t().searchPlaceholder;
+    searchInput.setAttribute("aria-label", t().searchPlaceholder);
     searchInput.value = state.searchQuery;
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
@@ -3670,20 +4149,30 @@ ${text}
     clearBtn.appendChild(createIconElement(ICONS.close));
     clearBtn.title = t().searchClearTitle;
     clearBtn.style.display = state.searchQuery ? "inline-flex" : "none";
-    let searchDebounce = null;
+    const applySearchFilter = () => {
+      const items = getConversationRows();
+      applyFolderBadgesAndFilter(items);
+      updateEmptyState(items, pillsContainer);
+    };
     searchInput.addEventListener("input", (e) => {
       state.searchQuery = e.target.value;
       clearBtn.style.display = state.searchQuery ? "inline-flex" : "none";
-      clearTimeout(searchDebounce);
-      searchDebounce = setTimeout(() => {
-        applyFolderBadgesAndFilter(getConversationRows());
-      }, 90);
+      applySearchFilter();
+    });
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && state.searchQuery) {
+        e.stopPropagation();
+        state.searchQuery = "";
+        searchInput.value = "";
+        clearBtn.style.display = "none";
+        applySearchFilter();
+      }
     });
     clearBtn.addEventListener("click", () => {
       state.searchQuery = "";
       searchInput.value = "";
       clearBtn.style.display = "none";
-      applyFolderBadgesAndFilter(getConversationRows());
+      applySearchFilter();
       searchInput.focus();
     });
     searchWrap.appendChild(searchIcon);
@@ -3704,6 +4193,7 @@ ${text}
     const pillsContainer = document.createElement("div");
     pillsContainer.id = "gcm-pills-container";
     pillsContainer.className = "gcm-folders-pills";
+    setupPillsDropZone(pillsContainer);
     const footer = document.createElement("div");
     footer.className = "gcm-panel-footer";
     const scrollBtn = document.createElement("button");
@@ -3746,8 +4236,10 @@ ${text}
         resetBtn.addEventListener("click", () => {
           state.activeFolderFilter = "ALL";
           state.searchQuery = "";
-          const input = document.querySelector("#gcm-folders-box .gcm-search-input");
+          const input = document.getElementById("gcm-search-input") ?? document.querySelector("#gcm-folders-box .gcm-search-input");
           if (input) input.value = "";
+          const clearBtn = document.querySelector("#gcm-folders-box .gcm-search-clear");
+          if (clearBtn) clearBtn.style.display = "none";
           saveView();
           refreshUI();
         });
@@ -3765,10 +4257,71 @@ ${text}
       emptyBox.style.display = "none";
     }
   }
+  var pillsDropController = null;
+  function setupPillsDropZone(pillsContainer) {
+    pillsDropController?.abort();
+    pillsDropController = new AbortController();
+    const { signal } = pillsDropController;
+    const getDropPill = (target) => target instanceof Element ? target.closest(".gcm-folder-pill.gcm-drop-target") : null;
+    pillsContainer.addEventListener(
+      "dragenter",
+      (e) => {
+        const pill = getDropPill(e.target);
+        if (!pill) return;
+        e.preventDefault();
+        pill.classList.add("gcm-drop-active");
+      },
+      { signal }
+    );
+    pillsContainer.addEventListener(
+      "dragover",
+      (e) => {
+        const pill = getDropPill(e.target);
+        if (!pill) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        if (!pill.classList.contains("gcm-drop-active")) {
+          pillsContainer.querySelectorAll(".gcm-drop-active").forEach((p) => p.classList.remove("gcm-drop-active"));
+          pill.classList.add("gcm-drop-active");
+        }
+      },
+      { signal }
+    );
+    pillsContainer.addEventListener(
+      "dragleave",
+      (e) => {
+        const pill = getDropPill(e.target);
+        if (!pill) return;
+        const related = e.relatedTarget;
+        if (!(related instanceof Node) || !pill.contains(related)) {
+          pill.classList.remove("gcm-drop-active");
+        }
+      },
+      { signal }
+    );
+    pillsContainer.addEventListener(
+      "drop",
+      (e) => {
+        const pill = getDropPill(e.target);
+        if (!pill) return;
+        e.preventDefault();
+        pill.classList.remove("gcm-drop-active");
+        const targetFolderId = pill.dataset.folderId;
+        const convId = e.dataTransfer?.getData("application/x-gcm-conv-id") || e.dataTransfer?.getData("text/plain") || getDraggingConvId();
+        if (!convId || !targetFolderId) return;
+        assignChatToFolderWithUndo(convId, targetFolderId === "UNASSIGNED" ? null : targetFolderId);
+      },
+      { signal }
+    );
+  }
   function createFolderPill({ id, name, color, count, deletable, keywords }) {
     const pill = document.createElement("div");
     const hasRules = Array.isArray(keywords) && keywords.length > 0;
-    pill.className = "gcm-folder-pill" + (state.activeFolderFilter === id ? " active" : "") + (hasRules ? " gcm-pill-has-rules" : "");
+    const isDropTarget = id !== "ALL" && id !== "PROTECTED";
+    pill.className = "gcm-folder-pill" + (state.activeFolderFilter === id ? " active" : "") + (hasRules ? " gcm-pill-has-rules" : "") + (isDropTarget ? " gcm-drop-target" : "");
+    if (isDropTarget) {
+      pill.dataset.folderId = id;
+    }
     pill.setAttribute("role", "button");
     pill.setAttribute("tabindex", "0");
     pill.setAttribute("aria-pressed", String(state.activeFolderFilter === id));
@@ -3858,6 +4411,90 @@ ${text}
   }
 
   // src/main.js
+  var attachedStorageListeners = /* @__PURE__ */ new WeakSet();
+  var attachedRuntimeListeners = /* @__PURE__ */ new WeakSet();
+  function initThemeEngine() {
+    let fallbackPreset = null;
+    try {
+      if (typeof localStorage !== "undefined") {
+        fallbackPreset = localStorage.getItem(THEME_STORAGE_KEY);
+      }
+    } catch (_) {
+    }
+    applyThemePreset(fallbackPreset, { persist: false });
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage?.local?.get) {
+        chrome.storage.local.get([THEME_STORAGE_KEY], (res) => {
+          void chrome.runtime?.lastError;
+          const stored = res?.[THEME_STORAGE_KEY];
+          if (stored) {
+            const normalized = applyThemePreset(stored, { persist: false });
+            try {
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem(THEME_STORAGE_KEY, normalized);
+              }
+            } catch (_) {
+            }
+          }
+        });
+      }
+    } catch (_) {
+    }
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage?.sync?.get) {
+        chrome.storage.sync.get([THEME_STORAGE_KEY], (res) => {
+          void chrome.runtime?.lastError;
+          const synced = res?.[THEME_STORAGE_KEY];
+          if (synced) {
+            const normalized = applyThemePreset(synced, { persist: false });
+            try {
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem(THEME_STORAGE_KEY, normalized);
+              }
+            } catch (_) {
+            }
+            try {
+              if (chrome.storage?.local?.set) {
+                const p = chrome.storage.local.set({ [THEME_STORAGE_KEY]: normalized });
+                if (p && typeof p.catch === "function") p.catch(() => {
+                });
+              }
+            } catch (_) {
+            }
+          }
+        });
+      }
+    } catch (_) {
+    }
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage?.onChanged?.addListener && !attachedStorageListeners.has(chrome.storage.onChanged)) {
+        attachedStorageListeners.add(chrome.storage.onChanged);
+        chrome.storage.onChanged.addListener((changes, area) => {
+          if (area !== "local" && area !== "sync" || !changes?.[THEME_STORAGE_KEY]) return;
+          const normalized = applyThemePreset(changes[THEME_STORAGE_KEY].newValue, { persist: false });
+          try {
+            if (typeof localStorage !== "undefined") {
+              localStorage.setItem(THEME_STORAGE_KEY, normalized);
+            }
+          } catch (_) {
+          }
+        });
+      }
+    } catch (_) {
+    }
+    try {
+      if (typeof chrome !== "undefined" && chrome.runtime?.onMessage?.addListener && !attachedRuntimeListeners.has(chrome.runtime.onMessage)) {
+        attachedRuntimeListeners.add(chrome.runtime.onMessage);
+        chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+          if (msg?.type === "SET_THEME_PRESET") {
+            const applied = applyThemePreset(msg.preset);
+            sendResponse?.({ ok: true, preset: applied });
+          }
+        });
+      }
+    } catch (_) {
+    }
+  }
   function scheduleRefresh(delay = 120) {
     if (state.refreshDebounceTimer) return;
     state.refreshDebounceTimer = setTimeout(() => {
@@ -3889,6 +4526,7 @@ ${text}
       return;
     }
     syncHostTheme();
+    initThemeEngine();
     registerGlobalListeners();
     setupDelegatedSidebarListener();
     setTimeout(refreshUI, 800);

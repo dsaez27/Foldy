@@ -163,9 +163,111 @@ function assignSelectedToFolder(folderId) {
   );
 }
 
+export function assignChatToFolderWithUndo(convId, nextFolderId, onUndo = null) {
+  if (!convId) return false;
+  const normalizedNext = nextFolderId || null;
+  const prevFolderId = state.folderState.assignments[convId] ?? null;
+  if (prevFolderId === normalizedNext) return false;
+
+  if (normalizedNext) {
+    state.folderState.assignments[convId] = normalizedNext;
+  } else {
+    delete state.folderState.assignments[convId];
+  }
+
+  saveFolderData(state.folderState);
+  refreshUI();
+
+  const message = normalizedNext ? t().toastMovedToFolder(1) : t().toastRemovedFromFolder(1);
+  showUndoToast(message, () => {
+    if (prevFolderId) {
+      state.folderState.assignments[convId] = prevFolderId;
+    } else {
+      delete state.folderState.assignments[convId];
+    }
+    saveFolderData(state.folderState);
+    refreshUI();
+    onUndo?.(convId, prevFolderId);
+    updateStatusToast(
+      t().toastAssignmentUndone ?? (state.folderState.lang === 'es' ? '↩️ Asignación revertida.' : '↩️ Assignment reverted.'),
+      null,
+      null,
+      2500
+    );
+  });
+
+  return true;
+}
+
+let activeUndoController = null;
+let activeUndoTimer = null;
+
+export function showUndoToast(message, onUndo, durationMs = 5000) {
+  activeUndoController?.abort();
+  if (activeUndoTimer) {
+    clearTimeout(activeUndoTimer);
+    activeUndoTimer = null;
+  }
+  document.querySelectorAll('.gcm-toast-undo').forEach((el) => el.remove());
+
+  const controller = new AbortController();
+  activeUndoController = controller;
+  const { signal } = controller;
+
+  const toast = document.createElement('div');
+  toast.className = 'gcm-toast-undo';
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+
+  const msgEl = document.createElement('span');
+  msgEl.className = 'gcm-toast-undo-msg';
+  msgEl.textContent = message;
+
+  const undoBtn = document.createElement('button');
+  undoBtn.type = 'button';
+  undoBtn.className = 'gcm-toast-undo-btn';
+  undoBtn.textContent = t().undoBtn ?? (state.folderState.lang === 'es' ? 'Deshacer' : 'Undo');
+
+  const progress = document.createElement('div');
+  progress.className = 'gcm-toast-progress';
+
+  const dismiss = () => {
+    controller.abort();
+    if (activeUndoTimer) {
+      clearTimeout(activeUndoTimer);
+      activeUndoTimer = null;
+    }
+    if (activeUndoController === controller) activeUndoController = null;
+    toast.remove();
+  };
+
+  undoBtn.addEventListener(
+    'click',
+    () => {
+      dismiss();
+      onUndo?.();
+    },
+    { signal }
+  );
+
+  toast.append(msgEl, undoBtn, progress);
+  document.body.appendChild(toast);
+
+  activeUndoTimer = setTimeout(dismiss, durationMs);
+}
+
+let activeDragConvId = null;
+export const getDraggingConvId = () => activeDragConvId;
+
+let delegatedListenerController = null;
+
 export function setupDelegatedSidebarListener() {
   if (state.delegatedListenerAttached) return;
   state.delegatedListenerAttached = true;
+
+  delegatedListenerController?.abort();
+  delegatedListenerController = new AbortController();
+  const { signal } = delegatedListenerController;
 
   const stopPressOnControls = (e) => {
     const target = e.target;
@@ -178,10 +280,44 @@ export function setupDelegatedSidebarListener() {
       }
     }
   };
-  document.addEventListener('pointerdown', stopPressOnControls, true);
-  document.addEventListener('mousedown', stopPressOnControls, true);
-  document.addEventListener('pointerup', stopPressOnControls, true);
-  document.addEventListener('mouseup', stopPressOnControls, true);
+  document.addEventListener('pointerdown', stopPressOnControls, { capture: true, signal });
+  document.addEventListener('mousedown', stopPressOnControls, { capture: true, signal });
+  document.addEventListener('pointerup', stopPressOnControls, { capture: true, signal });
+  document.addEventListener('mouseup', stopPressOnControls, { capture: true, signal });
+
+  document.addEventListener(
+    'dragstart',
+    (e) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('input, button, .gcm-checkbox, .gcm-lock-icon')) {
+        e.preventDefault();
+        return;
+      }
+      const row = target.closest('.gcm-chat-row');
+      const convId = row?.dataset?.gcmConvId ?? row?.querySelector('.gcm-checkbox')?.dataset?.convId;
+      if (!row || !convId) return;
+
+      activeDragConvId = convId;
+      row.classList.add('gcm-dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('application/x-gcm-conv-id', convId);
+        e.dataTransfer.setData('text/plain', convId);
+      }
+    },
+    { capture: true, signal }
+  );
+
+  document.addEventListener(
+    'dragend',
+    () => {
+      activeDragConvId = null;
+      document.querySelectorAll('.gcm-chat-row.gcm-dragging').forEach((el) => el.classList.remove('gcm-dragging'));
+      document.querySelectorAll('.gcm-folder-pill.gcm-drop-active').forEach((el) => el.classList.remove('gcm-drop-active'));
+    },
+    { capture: true, signal }
+  );
 
   document.addEventListener(
     'click',
@@ -279,7 +415,7 @@ export function setupDelegatedSidebarListener() {
         updateToolbarState();
       }
     },
-    true
+    { capture: true, signal }
   );
 }
 
@@ -288,6 +424,12 @@ export function injectCheckboxes(items) {
     const { id, row, title } = items[i];
     if (!row.classList.contains('gcm-chat-row')) {
       row.classList.add('gcm-chat-row');
+    }
+    if (!row.draggable) {
+      row.draggable = true;
+    }
+    if (row.dataset.gcmConvId !== id) {
+      row.dataset.gcmConvId = id;
     }
     if (state.autoSelectAllMode && !row.classList.contains('gcm-hidden-by-filter') && !selectedMap.has(id)) {
       selectedMap.set(id, { id, title: title || row.textContent?.trim() || id });

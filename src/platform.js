@@ -153,6 +153,52 @@ export const SELECTORS = P.selectors;
 
 export const PRESET_COLORS = ['#4285f4', '#34a853', '#fbbc04', '#ea4335', '#a142f4', '#24c1e0', '#ff6d00'];
 
+export const THEME_PRESETS = ['adaptive', 'neo-brutal', 'terminal', 'minimal-flat', 'neon-synth'];
+export const THEME_STORAGE_KEY = 'gcm_ui_theme_preset';
+
+export function normalizeThemePreset(val) {
+  if (typeof val === 'string') {
+    const normalized = val.trim().toLowerCase();
+    if (THEME_PRESETS.includes(normalized)) {
+      return normalized;
+    }
+  }
+  return 'adaptive';
+}
+
+export function applyThemePreset(preset, { persist = true } = {}) {
+  const normalized = normalizeThemePreset(preset);
+  try {
+    document.documentElement?.setAttribute('data-gcm-style', normalized);
+  } catch (_) {}
+  if (persist) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(THEME_STORAGE_KEY, normalized);
+      }
+    } catch (_) {}
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.local?.set) {
+        const res = chrome.storage.local.set({ [THEME_STORAGE_KEY]: normalized });
+        if (res && typeof res.catch === 'function') {
+          res.catch(() => {});
+        }
+      }
+    } catch (_) {}
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.sync?.set) {
+        const res = chrome.storage.sync.set({ [THEME_STORAGE_KEY]: normalized }, () => {
+          void chrome.runtime?.lastError;
+        });
+        if (res && typeof res.catch === 'function') {
+          res.catch(() => {});
+        }
+      }
+    } catch (_) {}
+  }
+  return normalized;
+}
+
 function parseRgbLuminance(colorStr) {
   if (!colorStr || typeof colorStr !== 'string') return null;
   const m = colorStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
@@ -214,6 +260,15 @@ export function syncHostTheme() {
       root.setAttribute('data-gcm-theme', theme);
       if (PLATFORM_KEY) {
         root.setAttribute('data-gcm-platform', PLATFORM_KEY);
+      }
+      if (!root.getAttribute('data-gcm-style')) {
+        let saved = null;
+        try {
+          if (typeof localStorage !== 'undefined') {
+            saved = localStorage.getItem(THEME_STORAGE_KEY);
+          }
+        } catch (_) {}
+        root.setAttribute('data-gcm-style', normalizeThemePreset(saved));
       }
     }
   } catch (_) {}

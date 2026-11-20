@@ -6,6 +6,7 @@ import { ICONS, createIconElement, setButtonIconText } from './icons.js';
 import { refreshUI } from './main.js';
 import { P } from './platform.js';
 import { openPromptsModal } from './prompts.js';
+import { assignChatToFolderWithUndo, getDraggingConvId } from './selection.js';
 import { getConversationRows } from './sidebar.js';
 import { BUILTIN_FILTERS, autoClassifiedVisited, saveView, state, t } from './state.js';
 import { initCloudSync, normalizeStoredState, saveFolderData } from './storage.js';
@@ -294,7 +295,7 @@ export function registerGlobalListeners() {
         saveFolderData(state.folderState);
         refreshUI();
       }
-      const input = document.querySelector('#gcm-folders-box .gcm-search-input');
+      const input = document.getElementById('gcm-search-input') ?? document.querySelector('#gcm-folders-box .gcm-search-input');
       input?.focus();
       input?.select();
     }
@@ -402,8 +403,10 @@ function buildFoldersPanelDOM(box) {
 
   const searchInput = document.createElement('input');
   searchInput.type = 'text';
+  searchInput.id = 'gcm-search-input';
   searchInput.className = 'gcm-search-input';
   searchInput.placeholder = t().searchPlaceholder;
+  searchInput.setAttribute('aria-label', t().searchPlaceholder);
   searchInput.value = state.searchQuery;
 
   const clearBtn = document.createElement('button');
@@ -413,21 +416,33 @@ function buildFoldersPanelDOM(box) {
   clearBtn.title = t().searchClearTitle;
   clearBtn.style.display = state.searchQuery ? 'inline-flex' : 'none';
 
-  let searchDebounce = null;
+  const applySearchFilter = () => {
+    const items = getConversationRows();
+    applyFolderBadgesAndFilter(items);
+    updateEmptyState(items, pillsContainer);
+  };
+
   searchInput.addEventListener('input', (e) => {
     state.searchQuery = e.target.value;
     clearBtn.style.display = state.searchQuery ? 'inline-flex' : 'none';
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(() => {
-      applyFolderBadgesAndFilter(getConversationRows());
-    }, 90);
+    applySearchFilter();
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state.searchQuery) {
+      e.stopPropagation();
+      state.searchQuery = '';
+      searchInput.value = '';
+      clearBtn.style.display = 'none';
+      applySearchFilter();
+    }
   });
 
   clearBtn.addEventListener('click', () => {
     state.searchQuery = '';
     searchInput.value = '';
     clearBtn.style.display = 'none';
-    applyFolderBadgesAndFilter(getConversationRows());
+    applySearchFilter();
     searchInput.focus();
   });
 
@@ -452,6 +467,7 @@ function buildFoldersPanelDOM(box) {
   const pillsContainer = document.createElement('div');
   pillsContainer.id = 'gcm-pills-container';
   pillsContainer.className = 'gcm-folders-pills';
+  setupPillsDropZone(pillsContainer);
 
   const footer = document.createElement('div');
   footer.className = 'gcm-panel-footer';
@@ -504,8 +520,10 @@ function updateEmptyState(items, pillsContainer) {
       resetBtn.addEventListener('click', () => {
         state.activeFolderFilter = 'ALL';
         state.searchQuery = '';
-        const input = document.querySelector('#gcm-folders-box .gcm-search-input');
+        const input = document.getElementById('gcm-search-input') ?? document.querySelector('#gcm-folders-box .gcm-search-input');
         if (input) input.value = '';
+        const clearBtn = document.querySelector('#gcm-folders-box .gcm-search-clear');
+        if (clearBtn) clearBtn.style.display = 'none';
         saveView();
         refreshUI();
       });
@@ -525,13 +543,86 @@ function updateEmptyState(items, pillsContainer) {
   }
 }
 
+let pillsDropController = null;
+
+function setupPillsDropZone(pillsContainer) {
+  pillsDropController?.abort();
+  pillsDropController = new AbortController();
+  const { signal } = pillsDropController;
+
+  const getDropPill = (target) =>
+    target instanceof Element ? target.closest('.gcm-folder-pill.gcm-drop-target') : null;
+
+  pillsContainer.addEventListener(
+    'dragenter',
+    (e) => {
+      const pill = getDropPill(e.target);
+      if (!pill) return;
+      e.preventDefault();
+      pill.classList.add('gcm-drop-active');
+    },
+    { signal }
+  );
+
+  pillsContainer.addEventListener(
+    'dragover',
+    (e) => {
+      const pill = getDropPill(e.target);
+      if (!pill) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      if (!pill.classList.contains('gcm-drop-active')) {
+        pillsContainer.querySelectorAll('.gcm-drop-active').forEach((p) => p.classList.remove('gcm-drop-active'));
+        pill.classList.add('gcm-drop-active');
+      }
+    },
+    { signal }
+  );
+
+  pillsContainer.addEventListener(
+    'dragleave',
+    (e) => {
+      const pill = getDropPill(e.target);
+      if (!pill) return;
+      const related = e.relatedTarget;
+      if (!(related instanceof Node) || !pill.contains(related)) {
+        pill.classList.remove('gcm-drop-active');
+      }
+    },
+    { signal }
+  );
+
+  pillsContainer.addEventListener(
+    'drop',
+    (e) => {
+      const pill = getDropPill(e.target);
+      if (!pill) return;
+      e.preventDefault();
+      pill.classList.remove('gcm-drop-active');
+      const targetFolderId = pill.dataset.folderId;
+      const convId =
+        e.dataTransfer?.getData('application/x-gcm-conv-id') ||
+        e.dataTransfer?.getData('text/plain') ||
+        getDraggingConvId();
+      if (!convId || !targetFolderId) return;
+      assignChatToFolderWithUndo(convId, targetFolderId === 'UNASSIGNED' ? null : targetFolderId);
+    },
+    { signal }
+  );
+}
+
 function createFolderPill({ id, name, color, count, deletable, keywords }) {
   const pill = document.createElement('div');
   const hasRules = Array.isArray(keywords) && keywords.length > 0;
+  const isDropTarget = id !== 'ALL' && id !== 'PROTECTED';
   pill.className =
     'gcm-folder-pill' +
     (state.activeFolderFilter === id ? ' active' : '') +
-    (hasRules ? ' gcm-pill-has-rules' : '');
+    (hasRules ? ' gcm-pill-has-rules' : '') +
+    (isDropTarget ? ' gcm-drop-target' : '');
+  if (isDropTarget) {
+    pill.dataset.folderId = id;
+  }
   pill.setAttribute('role', 'button');
   pill.setAttribute('tabindex', '0');
   pill.setAttribute('aria-pressed', String(state.activeFolderFilter === id));

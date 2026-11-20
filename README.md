@@ -2,7 +2,7 @@
   <img src="assets/foldy-full.svg" alt="Foldy" width="380" />
 </p>
 
-<h1 align="center">Foldy v3.6.0 — Universal Smart Folders & Chat Manager for Gemini, ChatGPT, Claude, DeepSeek & OpenCode</h1>
+<h1 align="center">Foldy v3.8.0 — Universal Smart Folders & Chat Manager for Gemini, ChatGPT, Claude, DeepSeek & OpenCode</h1>
 
 <p align="center">
   <a href="#-english">🇺🇸 English</a> · <a href="#-español">🇪🇸 Español</a> · <a href="CHANGELOG.md">📦 Changelog</a> · <a href="TESTING_PLAN.md">🧪 Testing Plan</a>
@@ -14,9 +14,15 @@
 
 **Foldy** is a universal WebExtension (Manifest V3) for **Chrome, Edge, Brave, Opera, Firefox, and Safari** that upgrades your workflow across **Google Gemini**, **OpenAI ChatGPT**, **Anthropic Claude**, **DeepSeek**, and **OpenCode**. It adds smart folders with keyword auto-classification, automatic cloud synchronization (`chrome.storage.sync`), a 1-click Quick Prompt Vault, a control popup with platform statistics, keyboard shortcuts, a collapsible floating toolbar, instant search, chat lock protection, range multi-selection (`Shift + Click`), safe bulk deletion, Markdown export, and JSON backup/restore.
 
-### ✨ Highlights in v3.6.0
+### ✨ Highlights in v3.8.0
 
-- 🎨 **Per-Platform Adaptive Identity (`D-01`)**: Automatically adapts accent colors, radii, surface warmth, font stacks, and the Foldy SVG logo gradient to **Gemini**, **ChatGPT**, **Claude**, **DeepSeek**, and **OpenCode**.
+- 🎨 **5-Preset Visual Theme Engine**: Switch live between `Adaptive`, `Neo-Brutal`, `Terminal`, `Minimal Flat`, and `Neon Synth` from the popup across light and dark host themes.
+- ☁️ **Unified Cross-Platform Sync (`gcm_shared_config_v1`)**: Folders, auto-rules, Prompt Vault, language, and visual theme sync automatically across Gemini, ChatGPT, Claude, DeepSeek, and OpenCode tabs (and across PCs via `chrome.storage.sync`).
+- 🔗 **Cross-Browser Sync Code (`foldy1:`)**: Copy & Apply Sync Code in the popup using native `CompressionStream('gzip')` + Base64url to move your setup between Chrome, Edge, and Brave in seconds.
+- 🧲 **Native Drag & Drop + 5s Undo (`D-07`)**: Drag chat rows directly onto folder pills with dropzone highlight and a 5-second Undo toast with animated countdown bar.
+- 🔎 **Instant Global Search**: Real-time `#gcm-search-input` filtering without debounce (`Escape` to clear) alongside folder and lock filters.
+- 🧩 **Dynamic Prompt Variables (`{{var}}`)**: Automatically detects `{{variable}}` placeholders in the Prompt Vault and opens a quick-fill modal before inserting.
+- 🎨 **Per-Platform Adaptive Identity (`D-01`–`D-06`)**: Automatically adapts accent colors, radii, surface warmth, font stacks, and the Foldy SVG logo gradient to **Gemini**, **ChatGPT**, **Claude**, **DeepSeek**, and **OpenCode**.
 - 🧩 **Clean Sidebar Rows & Contextual Action Dock (`D-02`, `D-03`)**: Reclaims title space with a `3px` folder accent bar, expandable micro-dot pill, progressive hover/selection checkboxes, and an elastic floating action dock with `<kbd>` shortcut hints.
 - 📁 **Quick Folder Editing & SVG Empty State (`D-04`)**: Edit folder names, colors, and auto-rules in-place without losing chat assignments, plus an illustrated empty state when filters return zero matches.
 - ⚡ **Command-Palette Prompt Vault & Sync Quota Meter (`D-05`, `D-06`)**: Instant search, category tags, monospace preview, and copy/edit/insert actions in the Prompt Vault, plus a real-time `chrome.storage.sync` quota meter (`KB / 8.0 KB`) in the popup.
@@ -82,9 +88,15 @@ npm run check                      # Runs lint + test + build
 
 **Foldy** es una extensión universal de navegador (Manifest V3) para **Chrome, Edge, Brave, Opera, Firefox y Safari** que transforma tu experiencia en **Google Gemini**, **OpenAI ChatGPT**, **Anthropic Claude**, **DeepSeek** y **OpenCode**: añade carpetas inteligentes con clasificación automática por palabras clave, sincronización automática en la nube (`chrome.storage.sync`), bóveda de Prompts rápidos en 1 clic, popup de control con estadísticas por plataforma, atajos de teclado, barra de acciones contraíble, búsqueda instantánea, protección de chats con candado, selección múltiple por rango (`Shift + Clic`), borrado masivo seguro, exportación a Markdown y respaldo/importación en JSON.
 
-### ✨ Novedades en v3.6.0
+### ✨ Novedades en v3.8.0
 
-- 🎨 **Identidad Adaptativa por Plataforma (`D-01`)**: Adapta automáticamente acentos, radios, calidez de superficie, tipografía y degradado del logo Foldy a **Gemini**, **ChatGPT**, **Claude**, **DeepSeek** y **OpenCode**.
+- 🎨 **Motor de 5 Estilos Visuales**: Cambia en vivo desde el popup entre `Adaptive`, `Neo-Brutal`, `Terminal`, `Minimal Flat` y `Neon Synth` en modo claro y oscuro.
+- ☁️ **Sincronización Unificada Multi-Plataforma (`gcm_shared_config_v1`)**: Carpetas, auto-reglas, Bóveda de Prompts, idioma y tema visual se sincronizan automáticamente entre Gemini, ChatGPT, Claude, DeepSeek y OpenCode (y entre PCs vía `chrome.storage.sync`).
+- 🔗 **Sync Code entre Navegadores (`foldy1:`)**: Copia y aplica tu Sync Code desde el popup usando `CompressionStream('gzip')` nativo + Base64url para llevar tu configuración entre Chrome, Edge y Brave en segundos.
+- 🧲 **Drag & Drop Nativo + Deshacer en 5s (`D-07`)**: Arrastra conversaciones directamente sobre las píldoras de carpetas con resaltado de zona de caída y toast Deshacer de 5 segundos con barra animada.
+- 🔎 **Búsqueda Global Instantánea**: Filtrado en tiempo real con `#gcm-search-input` sin retardo (`Escape` para limpiar), junto a filtros de carpeta y candado.
+- 🧩 **Variables Dinámicas en Prompts (`{{var}}`)**: Detecta automáticamente placeholders `{{variable}}` en la Bóveda de Prompts y abre un modal rápido antes de insertar.
+- 🎨 **Identidad Adaptativa por Plataforma (`D-01`–`D-06`)**: Adapta automáticamente acentos, radios, calidez de superficie, tipografía y degradado del logo Foldy a **Gemini**, **ChatGPT**, **Claude**, **DeepSeek** y **OpenCode**.
 - 🧩 **Filas Despejadas y Dock Contextual (`D-02`, `D-03`)**: Libera ancho para los títulos con barra lateral de `3px`, micro-punto expansible, checkboxes progresivos y barra contextual con atajos `<kbd>`.
 - 📁 **Edición Rápida de Carpetas y Estado Vacío SVG (`D-04`)**: Edita nombre, color y auto-reglas sin perder asignaciones de chats, más tarjeta ilustrada cuando el filtro da 0 resultados.
 - ⚡ **Bóveda Command Palette y Medidor de Cuota Sync (`D-05`, `D-06`)**: Buscador instantáneo, etiquetas, vista previa monoespacio y copiar/editar/insertar en Prompts, más medidor en vivo de `chrome.storage.sync` (`KB / 8.0 KB`) en el popup.

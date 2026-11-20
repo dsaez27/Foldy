@@ -1,6 +1,6 @@
 {
   "name": "foldy",
-  "version": "3.6.0",
+  "version": "3.8.0",
   "private": true,
   "description": "Foldy - Browser Extension / Extensión de Navegador: smart folders, prompt vault, cloud sync & bulk delete for Gemini, ChatGPT, Claude, DeepSeek & OpenCode.",
   "type": "module",
