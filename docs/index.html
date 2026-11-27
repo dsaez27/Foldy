@@ -3,920 +3,673 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Foldy — Universal Smart Folders & Prompt Vault for AI</title>
-  <meta name="description" content="Organize Gemini, ChatGPT, Claude, DeepSeek, OpenCode, and Antigravity CLI with smart folders, Quick Prompt Vault ({{var}}), lock protection, Markdown export, and foldy1: Sync Code." />
+  <title>Foldy v4.2.5 — Carpetas inteligentes y Bóveda de Prompts para tus IAs</title>
+  <meta name="description" content="Organiza Gemini, ChatGPT, Claude, DeepSeek, OpenCode y Antigravity CLI con carpetas inteligentes, Bóveda de Prompts {{var}}, 10 estilos visuales, candados, exportación Markdown y sincronización foldy1:." />
+  <meta name="theme-color" content="#090a0d" />
   <link rel="icon" type="image/svg+xml" href="./foldy-icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #07090f;
-      --bg-elev: rgba(17, 21, 34, 0.72);
-      --bg-card: rgba(20, 25, 40, 0.65);
-      --border: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.16);
-      --text: #f3f6ff;
-      --muted: #9aa5c4;
-      --accent: #4285f4;
-      --accent-2: #a142f4;
-      --accent-glow: rgba(66, 133, 244, 0.32);
-      --radius: 18px;
-      --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: var(--font-sans);
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      overflow-x: hidden;
-      min-height: 100vh;
-    }
-
-    /* Ambient animated background */
-    .ambient {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      pointer-events: none;
-      background:
-        radial-gradient(60rem 36rem at 18% -5%, var(--accent-glow), transparent 60%),
-        radial-gradient(50rem 32rem at 85% 12%, rgba(161, 66, 244, 0.2), transparent 60%),
-        radial-gradient(45rem 30rem at 50% 95%, rgba(36, 193, 224, 0.12), transparent 60%);
-      transition: background 0.5s ease;
-    }
-    .grid-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 100%);
-    }
-
-    .container {
-      width: 100%;
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    /* Navbar */
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 40;
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      background: rgba(7, 9, 15, 0.72);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 68px;
-      gap: 16px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      color: var(--text);
-      font-weight: 800;
-      font-size: 1.15rem;
-      letter-spacing: -0.02em;
-    }
-    .brand img { width: 32px; height: 32px; }
-    .brand-tag {
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-    .nav-links a {
-      color: var(--muted);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--text); }
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .lang-btn {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 7px 12px;
-      border-radius: 10px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .lang-btn:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--border-strong); }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 22px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 0.94rem;
-      text-decoration: none;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: #fff;
-      box-shadow: 0 10px 30px -8px var(--accent-glow);
-    }
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 14px 36px -6px var(--accent-glow);
-    }
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.06);
-      color: var(--text);
-      border-color: var(--border-strong);
-    }
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.11);
-      transform: translateY(-1px);
-    }
-    .btn-sm { padding: 8px 14px; font-size: 0.84rem; border-radius: 10px; }
-
-    /* Hero */
-    .hero {
-      padding: 78px 0 56px;
-      text-align: center;
-    }
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border-strong);
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #cdd8ff;
-      margin-bottom: 24px;
-    }
-    .eyebrow .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 12px var(--accent);
-    }
-    h1 {
-      font-size: clamp(2.3rem, 5.4vw, 4.1rem);
-      font-weight: 800;
-      line-height: 1.08;
-      letter-spacing: -0.035em;
-      max-width: 860px;
-      margin: 0 auto 20px;
-    }
-    .grad-text {
-      background: linear-gradient(120deg, #ffffff 10%, var(--accent) 55%, var(--accent-2) 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-    .hero-sub {
-      font-size: clamp(1rem, 1.8vw, 1.18rem);
-      color: var(--muted);
-      max-width: 680px;
-      margin: 0 auto 32px;
-    }
-    .hero-ctas {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 36px;
-    }
-
-    /* Platform Switcher */
-    .platform-pills {
-      display: inline-flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px;
-      padding: 6px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border);
-      margin-bottom: 28px;
-    }
-    .p-pill {
-      background: transparent;
-      border: 1px solid transparent;
-      color: var(--muted);
-      padding: 8px 16px;
-      border-radius: 11px;
-      font-size: 0.86rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .p-pill:hover { color: var(--text); }
-    .p-pill.active {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-      border-color: var(--accent);
-      box-shadow: 0 0 20px -6px var(--accent);
-    }
-
-    /* Interactive Mockup */
-    .mockup {
-      max-width: 920px;
-      margin: 0 auto;
-      border-radius: 22px;
-      background: linear-gradient(180deg, rgba(22, 27, 44, 0.9), rgba(12, 15, 26, 0.95));
-      border: 1px solid var(--border-strong);
-      box-shadow: 0 30px 90px -25px rgba(0, 0, 0, 0.8), 0 0 60px -25px var(--accent-glow);
-      overflow: hidden;
-      text-align: left;
-    }
-    .mockup-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 18px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.02);
-    }
-    .traffic { display: flex; gap: 7px; }
-    .traffic span { width: 11px; height: 11px; border-radius: 50%; background: rgba(255,255,255,0.16); }
-    .traffic span:nth-child(1) { background: #ff5f56; }
-    .traffic span:nth-child(2) { background: #ffbd2e; }
-    .traffic span:nth-child(3) { background: #27c93f; }
-    .mockup-url {
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: var(--muted);
-      background: rgba(255, 255, 255, 0.05);
-      padding: 4px 12px;
-      border-radius: 8px;
-    }
-    .mockup-body {
-      display: grid;
-      grid-template-columns: 270px 1fr;
-      min-height: 300px;
-    }
-    .mock-side {
-      border-right: 1px solid var(--border);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .mock-search {
-      font-size: 0.8rem;
-      color: var(--muted);
-      padding: 8px 12px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-    }
-    .mock-folders { display: flex; flex-wrap: wrap; gap: 6px; }
-    .mf {
-      font-size: 0.74rem;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--border);
-    }
-    .mf.on { background: var(--accent); color: #fff; border-color: transparent; }
-    .mock-chat {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 9px 10px;
-      border-radius: 10px;
-      font-size: 0.82rem;
-      background: rgba(255, 255, 255, 0.03);
-      border-left: 3px solid var(--accent);
-    }
-    .mock-chat.alt { border-left-color: #34a853; }
-    .mock-chat.alt2 { border-left-color: #fbbc04; }
-    .mock-main {
-      padding: 20px 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .vault-card {
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-strong);
-    }
-    .vault-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      font-size: 0.84rem;
-      font-weight: 700;
-    }
-    .vault-code {
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: #c8d6ff;
-      background: rgba(0, 0, 0, 0.35);
-      padding: 10px 12px;
-      border-radius: 10px;
-      line-height: 1.5;
-    }
-    .var-chip {
-      color: #ffd57e;
-      background: rgba(251, 188, 4, 0.14);
-      padding: 1px 6px;
-      border-radius: 5px;
-    }
-    .mock-dock {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .dock-pill {
-      font-size: 0.76rem;
-      font-weight: 600;
-      padding: 6px 11px;
-      border-radius: 9px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--border);
-      color: #dbe4ff;
-    }
-
-    /* Sections */
-    section { padding: 72px 0; }
-    .sec-head {
-      text-align: center;
-      max-width: 660px;
-      margin: 0 auto 44px;
-    }
-    .sec-head h2 {
-      font-size: clamp(1.7rem, 3.2vw, 2.45rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 12px;
-    }
-    .sec-head p { color: var(--muted); font-size: 1rem; }
-
-    /* Bento Grid */
-    .bento {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
-    }
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      backdrop-filter: blur(12px);
-      transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-    .card:hover {
-      transform: translateY(-3px);
-      border-color: var(--border-strong);
-    }
-    .card-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      font-size: 1.25rem;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--border);
-      margin-bottom: 16px;
-    }
-    .card h3 {
-      font-size: 1.06rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .card p { font-size: 0.9rem; color: var(--muted); }
-
-    /* Download Hub */
-    .hub-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-    }
-    .hub-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-strong);
-      border-radius: 20px;
-      padding: 28px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 18px;
-    }
-    .hub-card.cli-card {
-      background: linear-gradient(145deg, rgba(24, 30, 52, 0.85), rgba(14, 18, 32, 0.9));
-      border-color: rgba(161, 66, 244, 0.4);
-    }
-    .hub-badge {
-      display: inline-block;
-      font-size: 0.74rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(66, 133, 244, 0.16);
-      color: #8ab4ff;
-      margin-bottom: 10px;
-    }
-    .cli-card .hub-badge {
-      background: rgba(161, 66, 244, 0.18);
-      color: #d8a4ff;
-    }
-    .hub-card h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
-    .hub-card p { font-size: 0.92rem; color: var(--muted); }
-
-    .cmd-box {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: rgba(0, 0, 0, 0.48);
-      border: 1px solid var(--border-strong);
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-      color: #dce6ff;
-      overflow-x: auto;
-    }
-    .copy-btn {
-      flex-shrink: 0;
-      background: rgba(255, 255, 255, 0.09);
-      border: 1px solid var(--border);
-      color: #fff;
-      padding: 6px 11px;
-      border-radius: 8px;
-      font-size: 0.76rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .copy-btn:hover { background: rgba(255, 255, 255, 0.18); }
-
-    .browser-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .steps {
-      font-size: 0.84rem;
-      color: var(--muted);
-      padding-left: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    /* Sync Banner */
-    .sync-banner {
-      border-radius: 24px;
-      padding: 36px;
-      background: linear-gradient(125deg, rgba(66, 133, 244, 0.16), rgba(161, 66, 244, 0.16));
-      border: 1px solid var(--border-strong);
-      display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 28px;
-      align-items: center;
-    }
-    .sync-banner h2 { font-size: 1.65rem; font-weight: 800; margin-bottom: 10px; }
-    .sync-banner p { color: #c7d2f0; font-size: 0.95rem; }
-    .sync-pill {
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: rgba(7, 9, 15, 0.7);
-      border: 1px solid var(--border-strong);
-      color: #9be7ff;
-      word-break: break-all;
-    }
-
-    /* Footer */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 36px 0 48px;
-      color: var(--muted);
-      font-size: 0.88rem;
-    }
-    .foot-inner {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-    }
-    .foot-links { display: flex; flex-wrap: wrap; gap: 20px; }
-    .foot-links a { color: var(--muted); text-decoration: none; }
-    .foot-links a:hover { color: var(--text); }
-
-    @media (max-width: 860px) {
-      .nav-links { display: none; }
-      .mockup-body { grid-template-columns: 1fr; }
-      .mock-side { border-right: none; border-bottom: 1px solid var(--border); }
-      .bento { grid-template-columns: 1fr; }
-      .hub-grid { grid-template-columns: 1fr; }
-      .sync-banner { grid-template-columns: 1fr; }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="ambient" id="ambient"></div>
-  <div class="grid-overlay"></div>
+  <a class="skip-link" href="#main" data-i18n="skip">Saltar al contenido principal</a>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <div id="liveStatus" class="sr-only" aria-live="polite"></div>
 
-  <header>
-    <div class="container nav">
+  <header class="site-header">
+    <div class="container nav-bar">
       <a class="brand" href="#">
-        <img src="./foldy-icon.svg" alt="Foldy" />
+        <img class="brand-icon" src="./foldy-icon.svg" alt="" width="30" height="30" />
         <span>Foldy</span>
-        <span class="brand-tag">v4.1.1</span>
+        <span class="version-pill">v4.2.5</span>
       </a>
-      <nav class="nav-links">
-        <a href="#features" data-i18n="navFeatures">Funciones</a>
-        <a href="#download" data-i18n="navDownload">Descargar</a>
+
+      <nav class="nav-links" aria-label="Navegación principal">
+        <a href="#platforms" data-i18n="navPlatforms">Demo Chrome</a>
+        <a href="#anatomy" data-i18n="navAnatomy">Capacidades</a>
+        <a href="#themes" data-i18n="navThemes">Estilos</a>
+        <a href="#install" data-i18n="navInstall">Instalar</a>
         <a href="#sync" data-i18n="navSync">Sync foldy1:</a>
-        <a href="https://github.com/dsaez27/Foldy-agy" target="_blank" rel="noopener">Antigravity CLI</a>
       </nav>
+
       <div class="nav-actions">
-        <button class="lang-btn" id="langToggle" type="button">🇺🇸 EN</button>
-        <a class="btn btn-secondary btn-sm" href="https://github.com/dsaez27/Foldy" target="_blank" rel="noopener">GitHub</a>
+        <button class="icon-btn" id="langToggle" type="button" aria-label="Cambiar idioma">EN</button>
+        <a class="icon-btn" href="https://github.com/dsaez27/Foldy" target="_blank" rel="noopener">
+          <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+            <path d="M9 18c-4.51 2-5-2-7-2" />
+          </svg>
+          <span>GitHub</span>
+        </a>
+        <a class="btn btn-primary btn-sm" href="https://github.com/dsaez27/Foldy/releases/download/v4.2.5/Foldy-v4.2.5-chromium.zip" data-i18n="navDownload">Descargar</a>
       </div>
     </div>
   </header>
 
-  <main>
-    <section class="hero">
+  <main id="main">
+    <!-- Hero + Interactive macOS Chrome Stage -->
+    <section class="hero" id="platforms">
       <div class="container">
-        <div class="eyebrow">
-          <span class="dot"></span>
-          <span data-i18n="eyebrow">Extensión Universal v4.1.1 + Plugin Nativo para Antigravity CLI</span>
-        </div>
-        <h1>
-          <span data-i18n="heroTitle1">Carpetas inteligentes y Prompts para</span>
-          <span class="grad-text" data-i18n="heroTitle2">todas tus IAs en un solo lugar.</span>
-        </h1>
-        <p class="hero-sub" data-i18n="heroSub">
-          Organiza conversaciones en Gemini, ChatGPT, Claude, DeepSeek, OpenCode y Antigravity CLI con auto-clasificación, Bóveda de Prompts {{var}}, candados y sincronización foldy1:.
-        </p>
-
-        <div class="hero-ctas">
-          <a class="btn btn-primary" href="https://github.com/dsaez27/Foldy/releases/download/v4.1.1/foldy-v4.1.1-chromium.zip">
-            ⬇ <span data-i18n="ctaZip">Descargar Extensión v4.1.1 (.zip)</span>
-          </a>
-          <a class="btn btn-secondary" href="#download">
-            ⚡ <span data-i18n="ctaCli">Instalar en Antigravity CLI</span>
-          </a>
-        </div>
-
-        <div class="platform-pills" role="tablist" aria-label="AI Platforms">
-          <button class="p-pill active" data-platform="gemini" type="button">Gemini</button>
-          <button class="p-pill" data-platform="chatgpt" type="button">ChatGPT</button>
-          <button class="p-pill" data-platform="claude" type="button">Claude</button>
-          <button class="p-pill" data-platform="deepseek" type="button">DeepSeek</button>
-          <button class="p-pill" data-platform="opencode" type="button">OpenCode</button>
-        </div>
-
-        <div class="mockup">
-          <div class="mockup-bar">
-            <div class="traffic"><span></span><span></span><span></span></div>
-            <div class="mockup-url" id="mockUrl">gemini.google.com</div>
-            <div style="font-size:0.76rem;color:var(--muted);">Foldy v4.1.1</div>
+        <div class="hero-header">
+          <h1 class="hero-title" data-i18n="heroTitle">Tus chats de IA, por fin bajo control.</h1>
+          <div class="hero-aside">
+            <p class="hero-sub" data-i18n="heroSub">
+              Organiza Gemini, ChatGPT, Claude, DeepSeek, OpenCode y Antigravity CLI con carpetas inteligentes, Bóveda de Prompts {{var}}, candados y sincronización foldy1: sin cuentas.
+            </p>
+            <div class="hero-ctas">
+              <a class="btn btn-primary" href="https://github.com/dsaez27/Foldy/releases/download/v4.2.5/Foldy-v4.2.5-chromium.zip">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span data-i18n="ctaDownload">Descargar Extensión v4.2.5</span>
+              </a>
+              <a class="btn btn-secondary" href="#install">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="4 17 10 11 4 5" />
+                  <line x1="12" y1="19" x2="20" y2="19" />
+                </svg>
+                <span data-i18n="ctaCli">Instalar en Antigravity CLI</span>
+              </a>
+            </div>
+            <div class="hero-meta">
+              <span data-i18n="metaM3">Manifest V3</span>
+              <span aria-hidden="true">·</span>
+              <span data-i18n="metaMit">Open Source (MIT)</span>
+              <span aria-hidden="true">·</span>
+              <span data-i18n="metaLocal">100% local · Sync opcional</span>
+            </div>
           </div>
-          <div class="mockup-body">
-            <div class="mock-side">
-              <div class="mock-search" data-i18n="mockSearch">🔎 Buscar conversación...</div>
-              <div class="mock-folders">
-                <span class="mf on" data-i18n="mfAll">Todas</span>
-                <span class="mf">💻 Dev</span>
-                <span class="mf">📚 Study</span>
-                <span class="mf">🔒 Lock</span>
+        </div>
+
+        <!-- Authentic macOS Chrome Browser Frame -->
+        <div class="macos-chrome">
+          <div class="chrome-tabstrip">
+            <div class="macos-lights" aria-hidden="true">
+              <span class="macos-light red"></span>
+              <span class="macos-light yellow"></span>
+              <span class="macos-light green"></span>
+            </div>
+
+            <div class="chrome-tabs" role="tablist" aria-label="Pestañas de Chrome en macOS">
+              <button class="chrome-tab" role="tab" type="button" data-platform="claude" aria-selected="true">
+                <span class="platform-dot dot-claude" aria-hidden="true"></span>
+                <span>Claude</span>
+                <span class="chrome-tab-close" aria-hidden="true">×</span>
+              </button>
+              <button class="chrome-tab" role="tab" type="button" data-platform="gemini" aria-selected="false" tabindex="-1">
+                <span class="platform-dot dot-gemini" aria-hidden="true"></span>
+                <span>Google Gemini</span>
+                <span class="chrome-tab-close" aria-hidden="true">×</span>
+              </button>
+              <button class="chrome-tab" role="tab" type="button" data-platform="chatgpt" aria-selected="false" tabindex="-1">
+                <span class="platform-dot dot-chatgpt" aria-hidden="true"></span>
+                <span>ChatGPT</span>
+                <span class="chrome-tab-close" aria-hidden="true">×</span>
+              </button>
+              <span class="chrome-tab-plus" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="chrome-toolbar">
+            <div class="chrome-nav-btns" aria-hidden="true">
+              <span class="chrome-nav-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+              </span>
+              <span class="chrome-nav-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+              </span>
+              <span class="chrome-nav-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
+              </span>
+            </div>
+
+            <div class="chrome-omnibox">
+              <div class="chrome-omnibox-left">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                <span><span class="chrome-omnibox-scheme">https://</span><strong id="chromeHost">claude.ai</strong><span class="chrome-omnibox-scheme" id="chromePath">/new</span></span>
               </div>
-              <div class="mock-chat">
-                <span>API REST Refactor</span><span>🔒</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#80868b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </div>
+
+            <div class="chrome-extensions" aria-hidden="true">
+              <span class="chrome-ext-foldy" title="Foldy v4.2.5">
+                <img src="./foldy-icon.svg" alt="" width="18" height="18" />
+              </span>
+              <span class="chrome-nav-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z" /></svg>
+              </span>
+              <span class="chrome-profile-chip">AR</span>
+            </div>
+          </div>
+
+          <!-- Interactive AI Workspace with Anonymized Demo Content -->
+          <div class="ai-workspace" id="aiWorkspace" data-platform="claude">
+            <aside class="ws-sidebar" aria-label="Conversaciones de demostración">
+              <div class="ws-brand-row">
+                <span class="ws-brand-left">
+                  <span id="wsBrandName">Claude</span>
+                </span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#848c9a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" /></svg>
               </div>
-              <div class="mock-chat alt">
-                <span>Resumen Arquitectura</span><span>📁</span>
+
+              <div class="ws-new-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                <span data-i18n="wsNewChat">Nueva conversación</span>
               </div>
-              <div class="mock-chat alt2">
-                <span>Roadmap Foldy v4</span><span>🔒</span>
+
+              <div class="ws-section-label" data-i18n="wsRecent">Recientes</div>
+
+              <div class="ws-chat-list" id="wsChatList"></div>
+
+              <div class="ws-profile">
+                <span class="ws-avatar" aria-hidden="true">AR</span>
+                <span class="ws-user-meta">
+                  <span class="ws-user-name">Alex Rivera</span>
+                  <span class="ws-user-plan">Workspace Pro</span>
+                </span>
+              </div>
+            </aside>
+
+            <div class="ws-main">
+              <!-- Vertical Foldy Bulk Action Toolbar -->
+              <div class="foldy-vbar" aria-label="Barra vertical Foldy">
+                <span class="foldy-vbar-count" id="vbarCount">3</span>
+                <span class="foldy-vbar-sep"></span>
+                <span class="foldy-vbar-btn" title="Mover a carpeta">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                </span>
+                <span class="foldy-vbar-btn" title="Candado">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                </span>
+                <span class="foldy-vbar-btn" title="Ocultar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                </span>
+                <span class="foldy-vbar-btn" title="Exportar Markdown">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                </span>
+                <span class="foldy-vbar-sep"></span>
+                <span class="foldy-vbar-btn is-danger" title="Borrado seguro">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
+                </span>
+              </div>
+
+              <!-- AI Composer Mock -->
+              <div class="ws-center">
+                <div class="ws-greeting" id="wsGreeting">Buenas tardes, Alex</div>
+                <div class="ws-composer">
+                  <div class="ws-composer-placeholder" id="wsPlaceholder">¿En qué proyecto trabajamos hoy?</div>
+                  <div class="ws-composer-bottom">
+                    <span class="ws-model-pill" id="wsModel">Claude Sonnet 4.6</span>
+                    <span class="mono">Alt+Shift+F</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Interactive Floating Foldy Panel -->
+              <div class="foldy-float-panel" aria-label="Panel flotante interactivo de Foldy">
+                <div class="fp-head">
+                  <span class="fp-brand">
+                    <img src="./foldy-icon.svg" alt="" width="16" height="16" />
+                    Foldy
+                  </span>
+                  <span class="fp-new-btn" data-i18n="fpNew">+ Nueva</span>
+                </div>
+
+                <div class="fp-search-row">
+                  <input class="fp-search-input" id="fpSearch" type="search" placeholder="Buscar chats..." aria-label="Filtrar chats de demostración" />
+                </div>
+
+                <div class="fp-pills" id="fpPills"></div>
+
+                <div class="fp-footer">
+                  <span class="fp-foot-btn" data-i18n="fpLoad">Cargar</span>
+                  <span class="fp-foot-btn is-primary" data-i18n="fpPrompts">Prompts</span>
+                </div>
               </div>
             </div>
-            <div class="mock-main">
-              <div class="vault-card">
-                <div class="vault-head">
-                  <span data-i18n="vaultTitle">⚡ Bóveda de Prompts Rápidos</span>
-                  <span style="font-size:0.75rem;color:var(--muted);">Alt+Shift+F</span>
+          </div>
+
+          <div class="stage-footer">
+            <p class="stage-caption" id="stageCaption"></p>
+            <div class="stage-tags" id="stageTags"></div>
+          </div>
+        </div>
+
+        <div class="compat-strip">
+          <span class="compat-label" data-i18n="compatLabel">Compatible con</span>
+          <ul class="compat-list">
+            <li class="compat-item"><span class="platform-dot dot-gemini" aria-hidden="true"></span>Google Gemini</li>
+            <li class="compat-item"><span class="platform-dot dot-chatgpt" aria-hidden="true"></span>OpenAI ChatGPT &amp; Codex</li>
+            <li class="compat-item"><span class="platform-dot dot-claude" aria-hidden="true"></span>Anthropic Claude</li>
+            <li class="compat-item"><span class="platform-dot dot-deepseek" aria-hidden="true"></span>DeepSeek Chat</li>
+            <li class="compat-item"><span class="platform-dot dot-opencode" aria-hidden="true"></span>OpenCode AI</li>
+            <li class="compat-item">
+              <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+              </svg>
+              Antigravity CLI
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Product Anatomy -->
+    <section class="section" id="anatomy">
+      <div class="container">
+        <header class="section-header">
+          <h2 class="section-title" data-i18n="anatomyTitle">Diseñado para vivir dentro de cada IA sin estorbar.</h2>
+          <p class="section-desc" data-i18n="anatomyDesc">
+            Cada componente de Foldy adopta la paleta, los bordes y el ritmo de la plataforma donde estás trabajando. Nada de paneles genéricos pegados encima.
+          </p>
+        </header>
+
+        <div class="spreads">
+          <!-- Spread 1: Floating Panel & Pill -->
+          <article class="spread">
+            <div class="spread-copy">
+              <h3 data-i18n="s1Title">Panel flotante, carpetas con auto-reglas y chats ocultos.</h3>
+              <p data-i18n="s1Desc">
+                Crea carpetas con color propio y reglas de palabras clave para clasificar conversaciones automáticamente. Arrastra chats sobre cualquier píldora con Deshacer de 5 segundos, oculta hilos sin borrarlos y minimiza el panel a una cápsula discreta cuando necesites pantalla completa.
+              </p>
+              <ul class="spec-list">
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s1Li1">Búsqueda instantánea sin retardo con atajo Alt+Shift+S y orden por recientes.</span>
+                </li>
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s1Li2">Píldora dedicada Ocultos para despejar tu barra lateral sin perder contexto.</span>
+                </li>
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s1Li3">Arrastre libre con márgenes seguros de 8 px para que el panel nunca se escape.</span>
+                </li>
+              </ul>
+            </div>
+            <div class="spread-visual visual-stack-panel">
+              <div class="demo-panel-card" aria-label="Vista limpia del panel flotante de carpetas">
+                <div class="fp-head">
+                  <span class="fp-brand"><img src="./foldy-icon.svg" alt="" width="18" height="18" /> Foldy</span>
+                  <span class="fp-new-btn" data-i18n="fpNew">+ Nueva</span>
                 </div>
-                <div class="vault-code">
-                  Actúa como Senior Engineer. Revisa este código en <span class="var-chip">{{lenguaje}}</span> enfocado en <span class="var-chip">{{objetivo}}</span> y propone mejoras limpias.
+                <div class="tp-search" data-i18n="tpSearch">Buscar conversación...</div>
+                <div class="fp-pills">
+                  <span class="fp-pill is-active">Todas <span class="fp-pill-count">14</span></span>
+                  <span class="fp-pill"><span class="platform-dot dot-gemini"></span>Programación <span class="fp-pill-count">5</span></span>
+                  <span class="fp-pill"><span class="platform-dot dot-chatgpt"></span>Investigación <span class="fp-pill-count">4</span></span>
+                  <span class="fp-pill"><span class="platform-dot dot-amber"></span>Producto <span class="fp-pill-count">3</span></span>
+                  <span class="fp-pill"><span class="platform-dot dot-opencode"></span>Diseño <span class="fp-pill-count">2</span></span>
+                  <span class="fp-pill"><span class="platform-dot dot-slate"></span>Ocultos <span class="fp-pill-count">6</span></span>
+                </div>
+                <div class="fp-footer">
+                  <span class="fp-foot-btn" data-i18n="fpLoad">Cargar</span>
+                  <span class="fp-foot-btn is-primary" data-i18n="fpPrompts">Prompts</span>
                 </div>
               </div>
-              <div class="mock-dock">
-                <span class="dock-pill">🧲 Drag &amp; Drop + Undo 5s</span>
-                <span class="dock-pill">📥 Export .md</span>
-                <span class="dock-pill">🎨 5 Themes</span>
-                <span class="dock-pill">🔗 foldy1: Sync</span>
+
+              <img
+                class="ui-shot-pill"
+                src="./screenshots/foldy-pill.png"
+                alt="Cápsula minimizada de Foldy"
+                width="150"
+                height="62"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </article>
+
+          <!-- Spread 2: Prompt Vault (Clean Interactive Demo) -->
+          <article class="spread is-reversed">
+            <div class="spread-copy">
+              <h3 data-i18n="s2Title">Bóveda de Prompts con {{variables}} e inserción en 1 clic.</h3>
+              <p data-i18n="s2Desc">
+                Guarda tus instrucciones más efectivas por categoría y ábrelas desde cualquier IA con una paleta de comandos rápida. Al insertar un prompt con {{placeholders}}, Foldy solicita cada variable antes de inyectar párrafos limpios directamente en el editor.
+              </p>
+              <ul class="spec-list">
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s2Li1">Inyección nativa compatible con ProseMirror (ChatGPT/Claude) y Quill (Gemini).</span>
+                </li>
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s2Li2">Copia, edita, crea o inserta con Enter y cierra con Escape sin soltar el teclado.</span>
+                </li>
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s2Li3">Sincronizada entre todas tus pestañas y respaldable en JSON o código foldy1:.</span>
+                </li>
+              </ul>
+            </div>
+            <div class="spread-visual">
+              <div class="demo-vault-card" aria-label="Demostración de Bóveda de Prompts">
+                <div class="vault-item">
+                  <div class="vault-item-main">
+                    <div class="vault-item-head">
+                      <span class="vault-item-title">Revisor de Código Senior</span>
+                      <span class="vault-tag">CÓDIGO</span>
+                    </div>
+                    <p class="vault-item-preview">Audita este módulo en {{lenguaje}} buscando cuellos de botella y riesgos de seguridad...</p>
+                  </div>
+                  <button class="vault-insert-btn" type="button" data-i18n="vaultInsert">Insertar ↵</button>
+                </div>
+
+                <div class="vault-item">
+                  <div class="vault-item-main">
+                    <div class="vault-item-head">
+                      <span class="vault-item-title">Resumen Ejecutivo</span>
+                      <span class="vault-tag">SÍNTESIS</span>
+                    </div>
+                    <p class="vault-item-preview">Condensa el documento en 5 decisiones accionables con impacto y siguientes pasos...</p>
+                  </div>
+                  <button class="vault-insert-btn" type="button" data-i18n="vaultInsert">Insertar ↵</button>
+                </div>
+
+                <div class="vault-item">
+                  <div class="vault-item-main">
+                    <div class="vault-item-head">
+                      <span class="vault-item-title">Traductor Técnico Natural</span>
+                      <span class="vault-tag">IDIOMAS</span>
+                    </div>
+                    <p class="vault-item-preview">Traduce al {{idioma_destino}} manteniendo precisión técnica y tono editorial limpio...</p>
+                  </div>
+                  <button class="vault-insert-btn" type="button" data-i18n="vaultInsert">Insertar ↵</button>
+                </div>
+
+                <div class="vault-item">
+                  <div class="vault-item-main">
+                    <div class="vault-item-head">
+                      <span class="vault-item-title">Arquitecto de APIs REST</span>
+                      <span class="vault-tag">BACKEND</span>
+                    </div>
+                    <p class="vault-item-preview">Diseña el contrato OpenAPI 3.1 para {{servicio}} con paginación por cursor e idempotencia...</p>
+                  </div>
+                  <button class="vault-insert-btn" type="button" data-i18n="vaultInsert">Insertar ↵</button>
+                </div>
               </div>
+            </div>
+          </article>
+
+          <!-- Spread 3: Multi-select & Real Clean Toolbar -->
+          <article class="spread">
+            <div class="spread-copy">
+              <h3 data-i18n="s3Title">Selección múltiple por rango, candados y borrado masivo seguro.</h3>
+              <p data-i18n="s3Desc">
+                Marca conversaciones individuales o selecciona rangos completos con Shift+Clic. La barra contextual (horizontal o vertical, en modo normal o solo íconos) te permite mover a carpetas, proteger chats clave con candado, ocultar, exportar a Markdown o limpiar el resto sin riesgo.
+              </p>
+              <ul class="spec-list">
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s3Li1">Los chats con candado quedan bloqueados frente a cualquier borrado masivo.</span>
+                </li>
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s3Li2">Exportación directa a Markdown (.md) del índice seleccionado o la conversación activa.</span>
+                </li>
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s3Li3">Borrado seguro vía DOM y API autenticada con CSRF en ChatGPT y Codex.</span>
+                </li>
+              </ul>
+            </div>
+            <div class="spread-visual visual-bulk">
+              <img
+                class="ui-shot ui-shot-toolbar"
+                src="./screenshots/foldy-toolbar.png"
+                alt="Barra contextual horizontal de Foldy con 9 seleccionados, mover a carpeta, candado, ocultar, exportar Markdown y borrar"
+                width="561"
+                height="74"
+                loading="lazy"
+                decoding="async"
+                tabindex="0"
+              />
+              <div class="demo-sidebar-card" aria-label="Vista limpia de selección múltiple en barra lateral">
+                <div class="ws-chat-row is-selected">
+                  <span class="ws-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>
+                  <span class="ws-chat-title">Arquitectura API REST v3</span>
+                  <span class="ws-folder-dot dot-gemini"></span>
+                </div>
+                <div class="ws-chat-row is-selected">
+                  <span class="ws-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>
+                  <span class="ws-chat-title">Migración PostgreSQL a Edge</span>
+                  <span class="ws-folder-dot dot-gemini"></span>
+                </div>
+                <div class="ws-chat-row is-selected">
+                  <span class="ws-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>
+                  <span class="ws-chat-title">Plan Lanzamiento Producto Q4</span>
+                  <span class="ws-folder-dot dot-amber"></span>
+                </div>
+                <div class="ws-chat-row is-selected">
+                  <span class="ws-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></span>
+                  <span class="ws-chat-title">Auditoría Core Web Vitals</span>
+                  <span class="ws-folder-dot dot-chatgpt"></span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Spread 4: Control Popup & Metrics (Real Clean Captures) -->
+          <article class="spread is-reversed">
+            <div class="spread-copy">
+              <h3 data-i18n="s4Title">Un popup de control con métricas reales y cuota en vivo.</h3>
+              <p data-i18n="s4Desc">
+                Supervisa cuántas carpetas, chats asignados y candados tienes en Gemini, ChatGPT, Claude, DeepSeek y OpenCode. Cambia de idioma (ES/EN), alterna entre 10 estilos visuales, activa la barra compacta y genera tu código de sincronización desde un solo panel.
+              </p>
+              <ul class="spec-list">
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s4Li1">Medidor en tiempo real de chrome.storage.sync (KB / 8.0 KB) con fusión sin pérdida.</span>
+                </li>
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s4Li2">Atajos globales configurados: Alt+Shift+F para el panel y Alt+Shift+S para buscar.</span>
+                </li>
+                <li>
+                  <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                  <span data-i18n="s4Li3">Respaldo e importación JSON sanitizada en un clic para migraciones completas.</span>
+                </li>
+              </ul>
+            </div>
+            <div class="spread-visual visual-popup-pair">
+              <img
+                class="ui-shot"
+                src="./screenshots/foldy-popup-platforms.png"
+                alt="Popup de Foldy v4.2.5 mostrando Cloud Sync 2.7/8.0 KB y las 5 plataformas IA soportadas"
+                width="354"
+                height="601"
+                loading="lazy"
+                decoding="async"
+                tabindex="0"
+              />
+              <img
+                class="ui-shot"
+                src="./screenshots/foldy-popup-themes.png"
+                alt="Popup de Foldy v4.2.5 mostrando el selector de 10 estilos visuales, barra compacta y código de sincronización foldy1:"
+                width="354"
+                height="602"
+                loading="lazy"
+                decoding="async"
+                tabindex="0"
+              />
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 Visual Themes Explorer -->
+    <section class="section" id="themes">
+      <div class="container">
+        <header class="section-header">
+          <h2 class="section-title" data-i18n="themesTitle">10 estilos visuales que responden a tu entorno.</h2>
+          <p class="section-desc" data-i18n="themesDesc">
+            Desde el cristal adaptativo por plataforma hasta Terminal verde fósforo o Papel Cálido diurno. Prueba cada estilo en vivo antes de instalar.
+          </p>
+        </header>
+
+        <div class="themes-layout">
+          <div class="theme-grid" id="themeGrid" role="radiogroup" aria-label="10 estilos visuales de Foldy"></div>
+
+          <div class="theme-preview-stage" id="themePreview" aria-label="Vista previa interactiva del estilo seleccionado">
+            <div class="tp-head">
+              <span class="tp-brand">
+                <img src="./foldy-icon.svg" alt="" width="22" height="22" />
+                Foldy
+              </span>
+              <span class="tp-btn" data-i18n="tpNew">+ Nueva</span>
+            </div>
+
+            <div class="tp-search" data-i18n="tpSearch">Buscar conversación...</div>
+
+            <div class="tp-pills">
+              <span class="tp-pill is-on" data-i18n="tpAll">Todas 12</span>
+              <span class="tp-pill"><span class="platform-dot dot-gemini" aria-hidden="true"></span><span data-i18n="tpDev">Programación</span></span>
+              <span class="tp-pill"><span class="platform-dot dot-chatgpt" aria-hidden="true"></span><span data-i18n="tpStudy">Investigación</span></span>
+              <span class="tp-pill"><span class="platform-dot dot-amber" aria-hidden="true"></span><span data-i18n="tpIdeas">Producto</span></span>
+            </div>
+
+            <div class="tp-footer">
+              <span class="tp-action" data-i18n="tpLoad">Cargar</span>
+              <span class="tp-action is-primary" data-i18n="tpPrompts">Prompts</span>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="features">
+    <!-- Download & Install Hub -->
+    <section class="section" id="install">
       <div class="container">
-        <div class="sec-head">
-          <h2 data-i18n="featHead">Todo lo que falta en tus chats de IA</h2>
-          <p data-i18n="featSub">Diseñado para ser rápido, privado (100% local + sync opcional) y consistente en navegador y terminal.</p>
-        </div>
+        <header class="section-header">
+          <h2 class="section-title" data-i18n="installTitle">Instala Foldy en tu navegador o en tu terminal.</h2>
+          <p class="section-desc" data-i18n="installDesc">
+            Gratuito, auditable y con paquetes verificados mediante SHA-256 en GitHub Releases.
+          </p>
+        </header>
 
-        <div class="bento">
-          <article class="card">
-            <div class="card-icon">📁</div>
-            <h3 data-i18n="f1Title">Carpetas inteligentes + Auto-reglas</h3>
-            <p data-i18n="f1Desc">Clasifica automáticamente tus conversaciones según palabras clave, arrastra chats sobre carpetas con Undo de 5s y busca al instante.</p>
-          </article>
-          <article class="card">
-            <div class="card-icon">⚡</div>
-            <h3 data-i18n="f2Title">Bóveda de Prompts con {{variables}}</h3>
-            <p data-i18n="f2Desc">Guarda tus mejores instrucciones e insértalas en 1 clic. Si contienen {{placeholders}}, Foldy abre un modal rápido antes de enviar.</p>
-          </article>
-          <article class="card">
-            <div class="card-icon">🔒</div>
-            <h3 data-i18n="f3Title">Candados y borrado masivo seguro</h3>
-            <p data-i18n="f3Desc">Protege chats importantes con candado (🔒), selecciona rangos con Shift + Clic y limpia tu historial sin riesgo de borrar lo clave.</p>
-          </article>
-          <article class="card">
-            <div class="card-icon">🎨</div>
-            <h3 data-i18n="f4Title">5 estilos visuales adaptativos</h3>
-            <p data-i18n="f4Desc">Cambia en vivo entre Adaptive, Neo-Brutal, Terminal, Minimal Flat y Neon Synth, sincronizado con el tema claro/oscuro de cada IA.</p>
-          </article>
-          <article class="card">
-            <div class="card-icon">📥</div>
-            <h3 data-i18n="f5Title">Exportación a Markdown (.md)</h3>
-            <p data-i18n="f5Desc">Descarga el índice de tus chats seleccionados o el contenido completo de tus conversaciones en Markdown limpio y respaldo JSON.</p>
-          </article>
-          <article class="card">
-            <div class="card-icon">🤖</div>
-            <h3 data-i18n="f6Title">Nativo en Antigravity CLI (/foldy)</h3>
-            <p data-i18n="f6Desc">Servidor MCP sin dependencias, hook de auto-clasificación y tabla interactiva con flechas + Espacio directo en tu terminal.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section id="download">
-      <div class="container">
-        <div class="sec-head">
-          <h2 data-i18n="dlHead">Centro de descargas — Todo en un solo lugar</h2>
-          <p data-i18n="dlSub">Gratis y de código abierto (MIT). Elige tu navegador o tu terminal.</p>
-        </div>
-
-        <div class="hub-grid">
-          <div class="hub-card">
+        <div class="install-grid">
+          <article class="install-panel">
             <div>
-              <span class="hub-badge" data-i18n="extBadge">Extensión Web · Manifest V3</span>
-              <h3 data-i18n="extTitle">Chrome, Brave, Edge, Firefox &amp; Opera</h3>
-              <p data-i18n="extDesc">Compatible con Gemini, ChatGPT (incluyendo Codex), Claude, DeepSeek y OpenCode.</p>
+              <div class="install-panel-head">
+                <h3 data-i18n="extTitle">Extensión de Navegador</h3>
+                <span class="version-pill" data-i18n="extBadge">Manifest V3 · v4.2.5</span>
+              </div>
+              <p data-i18n="extDesc">
+                Chrome, Brave, Edge, Firefox (109+), Opera y Safari. Lista para Gemini, ChatGPT, Claude, DeepSeek y OpenCode.
+              </p>
             </div>
-            <div class="browser-row">
-              <a class="btn btn-primary btn-sm" href="https://github.com/dsaez27/Foldy/releases/download/v4.1.1/foldy-v4.1.1-chromium.zip">⬇ Chrome / Brave / Edge (.zip)</a>
-              <a class="btn btn-secondary btn-sm" href="https://github.com/dsaez27/Foldy/releases/tag/v4.1.1" target="_blank" rel="noopener">GitHub Releases</a>
-            </div>
-            <ol class="steps">
-              <li data-i18n="step1">Descarga y descomprime <code>foldy-v4.1.1-chromium.zip</code>.</li>
-              <li data-i18n="step2">Abre <code>chrome://extensions</code> (o <code>brave://extensions</code> / <code>edge://extensions</code>) y activa <strong>Modo desarrollador</strong>.</li>
-              <li data-i18n="step3">Haz clic en <strong>Cargar descomprimida</strong> y selecciona la carpeta extraída.</li>
+
+            <ol class="install-steps">
+              <li data-i18n="extStep1">Descarga y descomprime foldy-v4.2.5-chromium.zip.</li>
+              <li data-i18n="extStep2">Abre chrome://extensions (o brave:// / edge://) y activa Modo desarrollador.</li>
+              <li data-i18n="extStep3">Pulsa Cargar descomprimida y selecciona la carpeta extraída.</li>
             </ol>
-          </div>
 
-          <div class="hub-card cli-card">
+            <div class="install-actions">
+              <a class="btn btn-primary btn-sm" href="https://github.com/dsaez27/Foldy/releases/download/v4.2.5/Foldy-v4.2.5-chromium.zip" data-i18n="extBtnZip">Descargar .zip (Chromium)</a>
+              <a class="btn btn-secondary btn-sm" href="https://github.com/dsaez27/Foldy/releases/tag/v4.2.5" target="_blank" rel="noopener" data-i18n="extBtnReleases">Ver GitHub Releases</a>
+            </div>
+          </article>
+
+          <article class="install-panel">
             <div>
-              <span class="hub-badge">Plugin Nativo · MCP + Hooks</span>
-              <h3 data-i18n="cliTitle">Google Antigravity CLI (<code>/foldy</code>)</h3>
-              <p data-i18n="cliDesc">Organiza tus sesiones locales de <code>agy</code> con carpetas, tabla interactiva (↑/↓ + Espacio), candados, Markdown y Sync Code <code>foldy1:</code>.</p>
+              <div class="install-panel-head">
+                <h3 data-i18n="cliTitle">Plugin Antigravity CLI</h3>
+                <span class="version-pill" data-i18n="cliBadge">MCP + Hooks · /foldy</span>
+              </div>
+              <p data-i18n="cliDesc">
+                Lleva tus mismas carpetas, candados, Bóveda de Prompts {{var}}, selector interactivo (↑/↓ + Espacio) y exportación Markdown directo a tu terminal agy.
+              </p>
             </div>
-            <div class="cmd-box">
+
+            <div class="cmd-bar">
               <code id="cliCmd">agy plugin install https://github.com/dsaez27/Foldy-agy</code>
-              <button class="copy-btn" data-copy="cliCmd" type="button" data-i18n="copyBtn">Copiar</button>
+              <button class="copy-btn" type="button" data-copy="cliCmd">
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                <span data-i18n="copy">Copiar</span>
+              </button>
             </div>
-            <div class="browser-row">
-              <a class="btn btn-secondary btn-sm" href="https://github.com/dsaez27/Foldy-agy" target="_blank" rel="noopener" data-i18n="cliRepoBtn">Ver repo Foldy-agy</a>
-              <a class="btn btn-secondary btn-sm" href="https://raw.githubusercontent.com/dsaez27/Foldy-agy/main/.antigravity-plugin/marketplace.json" target="_blank" rel="noopener">marketplace.json</a>
+
+            <div class="install-actions">
+              <a class="btn btn-secondary btn-sm" href="https://github.com/dsaez27/Foldy-agy" target="_blank" rel="noopener" data-i18n="cliBtnRepo">Ver repo Foldy-agy</a>
+              <a class="btn btn-secondary btn-sm" href="https://raw.githubusercontent.com/dsaez27/Foldy-agy/main/.antigravity-plugin/marketplace.json" target="_blank" rel="noopener" data-i18n="cliBtnMarket">marketplace.json</a>
             </div>
-          </div>
+          </article>
         </div>
       </div>
     </section>
 
-    <section id="sync">
+    <!-- foldy1: Sync -->
+    <section class="section" id="sync">
       <div class="container">
-        <div class="sync-banner">
+        <div class="sync-panel">
           <div>
-            <h2 data-i18n="syncTitle">Un solo ecosistema conectado por <code>foldy1:</code></h2>
-            <p data-i18n="syncDesc">Copia tu Sync Code comprimido (gzip + Base64url) desde el popup de Foldy en Chrome, Brave, Edge o Firefox y pégalo en otro navegador o directamente en Antigravity CLI con <code>/foldy sync foldy1:...</code>. Sin cuentas obligatorias ni servidores de terceros.</p>
+            <h2 data-i18n="syncTitle">Un ecosistema conectado por foldy1: sin cuentas ni servidores.</h2>
+            <p data-i18n="syncDesc">
+              Genera un código compacto (gzip nativo + Base64url) desde el popup de Foldy en Chrome, Brave, Edge o Firefox y aplícalo en otro navegador o en Antigravity CLI con /foldy sync. Tus datos viajan contigo, nunca a través de terceros.
+            </p>
           </div>
-          <div class="sync-pill">
-            /foldy sync foldy1:H4sIAAAAAAAAA6tWKkktLjFVslIq...
+
+          <div class="sync-code-card">
+            <div class="sync-flow">
+              <span data-i18n="syncFlow1">Navegador</span>
+              <span aria-hidden="true">→</span>
+              <span class="mono" data-i18n="syncFlow2">gzip + Base64url</span>
+              <span aria-hidden="true">→</span>
+              <span data-i18n="syncFlow3">Otro navegador / CLI</span>
+            </div>
+            <div class="sync-token">
+              /foldy sync <span class="sync-token-prefix">foldy1:</span>H4sIAAAAAAAAA6tWKkktLjFVslIq...
+            </div>
           </div>
         </div>
       </div>
     </section>
   </main>
 
-  <footer>
-    <div class="container foot-inner">
-      <div>© 2026 Foldy · Open Source (MIT) · Made by <strong>dsaez27</strong></div>
-      <div class="foot-links">
-        <a href="https://github.com/dsaez27/Foldy" target="_blank" rel="noopener">Foldy Web</a>
-        <a href="https://github.com/dsaez27/Foldy-agy" target="_blank" rel="noopener">Foldy-agy (CLI)</a>
-        <a href="https://github.com/dsaez27/Foldy/releases" target="_blank" rel="noopener">Releases</a>
-        <a href="https://github.com/dsaez27/Foldy/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
-      </div>
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span data-i18n="footerCopy">© 2026 Foldy · Open Source (MIT) · Creado por dsaez27</span>
+      <nav class="footer-links" aria-label="Enlaces del proyecto">
+        <a href="https://github.com/dsaez27/Foldy" target="_blank" rel="noopener" data-i18n="footerWeb">Foldy Web</a>
+        <a href="https://github.com/dsaez27/Foldy-agy" target="_blank" rel="noopener" data-i18n="footerCli">Foldy-agy (CLI)</a>
+        <a href="https://github.com/dsaez27/Foldy/releases" target="_blank" rel="noopener" data-i18n="footerReleases">Releases</a>
+        <a href="https://github.com/dsaez27/Foldy/blob/main/CHANGELOG.md" target="_blank" rel="noopener" data-i18n="footerChangelog">Changelog</a>
+      </nav>
     </div>
   </footer>
 
-  <script>
-    const PLATFORMS = {
-      gemini:   { url: 'gemini.google.com',  a1: '#4285f4', a2: '#a142f4', glow: 'rgba(66,133,244,0.34)' },
-      chatgpt:  { url: 'chatgpt.com',        a1: '#10a37f', a2: '#24c1e0', glow: 'rgba(16,163,127,0.32)' },
-      claude:   { url: 'claude.ai',          a1: '#d97757', a2: '#f59e0b', glow: 'rgba(217,119,87,0.32)' },
-      deepseek: { url: 'chat.deepseek.com',  a1: '#4d6bfe', a2: '#24c1e0', glow: 'rgba(77,107,254,0.34)' },
-      opencode: { url: 'opencode.ai',        a1: '#a142f4', a2: '#f538a0', glow: 'rgba(161,66,244,0.34)' }
-    };
+  <!-- Native accessible lightbox -->
+  <dialog class="lightbox" id="lightbox" closedby="any" aria-labelledby="lightboxTitle">
+    <div class="lightbox-head">
+      <span class="lightbox-title" id="lightboxTitle">Foldy v4.2.5</span>
+      <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Cerrar">
+        <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+    <div class="lightbox-body">
+      <img id="lightboxImg" src="./screenshots/foldy-popup-platforms.png" alt="Foldy v4.2.5" />
+    </div>
+  </dialog>
 
-    document.querySelectorAll('.p-pill').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.p-pill').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        const p = PLATFORMS[btn.dataset.platform];
-        if (!p) return;
-        document.documentElement.style.setProperty('--accent', p.a1);
-        document.documentElement.style.setProperty('--accent-2', p.a2);
-        document.documentElement.style.setProperty('--accent-glow', p.glow);
-        document.getElementById('mockUrl').textContent = p.url;
-      });
-    });
-
-    document.querySelectorAll('.copy-btn').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const el = document.getElementById(btn.dataset.copy);
-        if (!el) return;
-        await navigator.clipboard.writeText(el.textContent.trim());
-        const prev = btn.textContent;
-        btn.textContent = '✓';
-        setTimeout(() => { btn.textContent = prev; }, 1400);
-      });
-    });
-
-    const I18N = {
-      es: {
-        navFeatures: 'Funciones',
-        navDownload: 'Descargar',
-        navSync: 'Sync foldy1:',
-        eyebrow: 'Extensión Universal v4.1.1 + Plugin Nativo para Antigravity CLI',
-        heroTitle1: 'Carpetas inteligentes y Prompts para',
-        heroTitle2: 'todas tus IAs en un solo lugar.',
-        heroSub: 'Organiza conversaciones en Gemini, ChatGPT, Claude, DeepSeek, OpenCode y Antigravity CLI con auto-clasificación, Bóveda de Prompts {{var}}, candados y sincronización foldy1:.',
-        ctaZip: 'Descargar Extensión v4.1.1 (.zip)',
-        ctaCli: 'Instalar en Antigravity CLI',
-        mockSearch: '🔎 Buscar conversación...',
-        mfAll: 'Todas',
-        vaultTitle: '⚡ Bóveda de Prompts Rápidos',
-        featHead: 'Todo lo que falta en tus chats de IA',
-        featSub: 'Diseñado para ser rápido, privado (100% local + sync opcional) y consistente en navegador y terminal.',
-        f1Title: 'Carpetas inteligentes + Auto-reglas',
-        f1Desc: 'Clasifica automáticamente tus conversaciones según palabras clave, arrastra chats sobre carpetas con Undo de 5s y busca al instante.',
-        f2Title: 'Bóveda de Prompts con {{variables}}',
-        f2Desc: 'Guarda tus mejores instrucciones e insértalas en 1 clic. Si contienen {{placeholders}}, Foldy abre un modal rápido antes de enviar.',
-        f3Title: 'Candados y borrado masivo seguro',
-        f3Desc: 'Protege chats importantes con candado (🔒), selecciona rangos con Shift + Clic y limpia tu historial sin riesgo de borrar lo clave.',
-        f4Title: '5 estilos visuales adaptativos',
-        f4Desc: 'Cambia en vivo entre Adaptive, Neo-Brutal, Terminal, Minimal Flat y Neon Synth, sincronizado con el tema claro/oscuro de cada IA.',
-        f5Title: 'Exportación a Markdown (.md)',
-        f5Desc: 'Descarga el índice de tus chats seleccionados o el contenido completo de tus conversaciones en Markdown limpio y respaldo JSON.',
-        f6Title: 'Nativo en Antigravity CLI (/foldy)',
-        f6Desc: 'Servidor MCP sin dependencias, hook de auto-clasificación y tabla interactiva con flechas + Espacio directo en tu terminal.',
-        dlHead: 'Centro de descargas — Todo en un solo lugar',
-        dlSub: 'Gratis y de código abierto (MIT). Elige tu navegador o tu terminal.',
-        extBadge: 'Extensión Web · Manifest V3',
-        extTitle: 'Chrome, Brave, Edge, Firefox & Opera',
-        extDesc: 'Compatible con Gemini, ChatGPT (incluyendo Codex), Claude, DeepSeek y OpenCode.',
-        step1: 'Descarga y descomprime foldy-v4.1.1-chromium.zip.',
-        step2: 'Abre chrome://extensions (o brave://extensions / edge://extensions) y activa Modo desarrollador.',
-        step3: 'Haz clic en Cargar descomprimida y selecciona la carpeta extraída.',
-        cliTitle: 'Google Antigravity CLI (/foldy)',
-        cliDesc: 'Organiza tus sesiones locales de agy con carpetas, tabla interactiva (↑/↓ + Espacio), candados, Markdown y Sync Code foldy1:.',
-        copyBtn: 'Copiar',
-        cliRepoBtn: 'Ver repo Foldy-agy',
-        syncTitle: 'Un solo ecosistema conectado por foldy1:',
-        syncDesc: 'Copia tu Sync Code comprimido (gzip + Base64url) desde el popup de Foldy en Chrome, Brave, Edge o Firefox y pégalo en otro navegador o directamente en Antigravity CLI con /foldy sync foldy1:.... Sin cuentas obligatorias ni servidores de terceros.'
-      },
-      en: {
-        navFeatures: 'Features',
-        navDownload: 'Download',
-        navSync: 'foldy1: Sync',
-        eyebrow: 'Universal Extension v4.1.1 + Native Antigravity CLI Plugin',
-        heroTitle1: 'Smart folders & Prompt Vault for',
-        heroTitle2: 'all your AI chats in one place.',
-        heroSub: 'Organize Gemini, ChatGPT, Claude, DeepSeek, OpenCode, and Antigravity CLI with keyword auto-classification, {{var}} prompts, lock protection, and foldy1: Sync Code.',
-        ctaZip: 'Download Extension v4.1.1 (.zip)',
-        ctaCli: 'Install for Antigravity CLI',
-        mockSearch: '🔎 Search conversations...',
-        mfAll: 'All',
-        vaultTitle: '⚡ Quick Prompt Vault',
-        featHead: 'Everything missing from your AI chats',
-        featSub: 'Built to be fast, private (100% local + optional sync), and seamless across browser and terminal.',
-        f1Title: 'Smart Folders + Auto-Rules',
-        f1Desc: 'Auto-classify conversations by keywords, drag & drop chats onto folders with 5-second Undo, and filter instantly.',
-        f2Title: 'Prompt Vault with {{variables}}',
-        f2Desc: 'Save reusable prompts and inject them in 1 click. Detects {{placeholders}} automatically and opens a quick-fill modal.',
-        f3Title: 'Locks & Safe Bulk Deletion',
-        f3Desc: 'Protect important chats with a lock badge (🔒), range-select with Shift + Click, and bulk-clean unlocked history safely.',
-        f4Title: '5 Adaptive Visual Themes',
-        f4Desc: 'Switch live between Adaptive, Neo-Brutal, Terminal, Minimal Flat, and Neon Synth across light and dark host themes.',
-        f5Title: 'Markdown (.md) Export & Backup',
-        f5Desc: 'Export selected chat indexes or full active conversations to clean Markdown (.md) plus JSON configuration backups.',
-        f6Title: 'Native Antigravity CLI (/foldy)',
-        f6Desc: 'Zero-dependency MCP server, auto-classification Stop hook, and arrow+Space interactive table right in your terminal.',
-        dlHead: 'Download Hub — Everything in one place',
-        dlSub: 'Free and open source (MIT). Pick your browser or your terminal.',
-        extBadge: 'WebExtension · Manifest V3',
-        extTitle: 'Chrome, Brave, Edge, Firefox & Opera',
-        extDesc: 'Works seamlessly on Gemini, ChatGPT (including Codex), Claude, DeepSeek, and OpenCode.',
-        step1: 'Download and extract foldy-v4.1.1-chromium.zip.',
-        step2: 'Open chrome://extensions (or brave://extensions / edge://extensions) and enable Developer mode.',
-        step3: 'Click Load unpacked and select the extracted folder.',
-        cliTitle: 'Google Antigravity CLI (/foldy)',
-        cliDesc: 'Organize local agy sessions with smart folders, arrow+Space picker, locks, Markdown export, and foldy1: Sync Code.',
-        copyBtn: 'Copy',
-        cliRepoBtn: 'View Foldy-agy repo',
-        syncTitle: 'One unified ecosystem powered by foldy1:',
-        syncDesc: 'Copy your compressed Sync Code (gzip + Base64url) from Foldy popup in Chrome, Brave, Edge, or Firefox and apply it in another browser or Antigravity CLI via /foldy sync foldy1:.... Zero mandatory accounts or third-party servers.'
-      }
-    };
-
-    let currentLang = localStorage.getItem('foldy_landing_lang') || (navigator.language?.startsWith('en') ? 'en' : 'es');
-    const langBtn = document.getElementById('langToggle');
-
-    function applyLang(lang) {
-      currentLang = lang;
-      localStorage.setItem('foldy_landing_lang', lang);
-      document.documentElement.lang = lang;
-      langBtn.textContent = lang === 'es' ? '🇺🇸 EN' : '🇪🇸 ES';
-      const dict = I18N[lang];
-      document.querySelectorAll('[data-i18n]').forEach((el) => {
-        const key = el.dataset.i18n;
-        if (dict[key]) el.textContent = dict[key];
-      });
-    }
-
-    langBtn.addEventListener('click', () => applyLang(currentLang === 'es' ? 'en' : 'es'));
-    applyLang(currentLang);
-  </script>
+  <script type="module" src="./three-scene.js"></script>
+  <script src="./app.js" defer></script>
 </body>
 </html>
