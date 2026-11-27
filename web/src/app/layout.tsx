@@ -1,28 +1,6 @@
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, JetBrains_Mono, Manrope } from 'next/font/google';
 import { assetPath } from '@/data/foldyData';
 import './globals.css';
-
-const bricolage = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['600', '700'],
-  variable: '--font-display',
-  display: 'swap'
-});
-
-const manrope = Manrope({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-sans',
-  display: 'swap'
-});
-
-const jetbrains = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  variable: '--font-mono',
-  display: 'swap'
-});
 
 export const metadata: Metadata = {
   title: 'Foldy v4.2.5 — Carpetas inteligentes y Bóveda de Prompts para tus IAs',
@@ -39,10 +17,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="es"
-      className={`${bricolage.variable} ${manrope.variable} ${jetbrains.variable}`}
-    >
+    <html lang="es">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
